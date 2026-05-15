@@ -1,52 +1,81 @@
 <%@page contentType="text/html" pageEncoding="UTF-8"%>
-<%-- Khai báo thư viện JSTL để sử dụng thẻ c:if --%>
-<%@taglib prefix="c" uri="jakarta.tags.core" %>
-
 <!DOCTYPE html>
 <html>
 <head>
     <meta charset="UTF-8">
-    <title>Đăng nhập P2P</title>
+    <title>Đăng Nhập Hệ Thống - P2P Lending</title>
+    <!-- Nhúng thư viện icon Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        body { font-family: Arial, sans-serif; background-color: #f8f9fa; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
+        .login-card { width: 400px; background: white; padding: 40px; border-radius: 12px; box-shadow: 0px 4px 20px rgba(0,0,0,0.1); }
+        h2 { text-align: center; color: #333; margin-bottom: 25px; }
+        .form-group { margin-bottom: 20px; }
+        .form-group label { display: block; margin-bottom: 8px; color: #555; font-weight: bold; font-size: 14px; }
+        .form-group input { width: 100%; padding: 12px; border: 1px solid #ccc; border-radius: 6px; box-sizing: border-box; font-size: 15px; }
+        .form-group input:focus { border-color: #28a745; outline: none; }
+        
+        .btn-submit { width: 100%; padding: 14px; background-color: #28a745; border: none; border-radius: 6px; color: white; font-size: 16px; font-weight: bold; cursor: pointer; transition: background 0.2s; }
+        .btn-submit:hover { background-color: #218838; }
+        
+        /* Định dạng các thông báo Alert */
+        .alert { padding: 12px; border-radius: 6px; font-size: 14px; margin-bottom: 20px; text-align: center; font-weight: bold; }
+        .alert-danger { background-color: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
+        .alert-success { background-color: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
+        
+        .footer-links { text-align: center; margin-top: 20px; font-size: 14px; }
+        .footer-links a { color: #007bff; text-decoration: none; }
+        .footer-links a:hover { text-decoration: underline; }
+    </style>
 </head>
 <body>
-    <div style="width: 350px; margin: 100px auto; border: 1px solid #ddd; padding: 20px; border-radius: 10px; box-shadow: 0 4px 8px rgba(0,0,0,0.1); font-family: sans-serif;">
-        <h2 style="text-align: center; color: #333;">Đăng nhập P2P</h2>
 
-        <!-- PHẦN HIỂN THỊ THÔNG BÁO -->
-        <div style="margin-bottom: 15px;">
-            <%-- 1. Thông báo lỗi khi sai Email/Mật khẩu hoặc tài khoản chưa tồn tại --%>
-            <c:if test="${param.error == 'invalid'}">
-                <div style="color: #721c24; background-color: #f8d7da; border: 1px solid #f5c6cb; padding: 10px; border-radius: 5px; font-size: 14px; text-align: center;">
-                    ⚠️ Sai email hoặc mật khẩu. Vui lòng kiểm tra lại!
-                </div>
-            </c:if>
+    <div class="login-card">
+        <h2><i class="fa-solid fa-lock" style="color: #28a745;"></i> ĐĂNG NHẬP</h2>
 
-            <%-- 2. Thông báo thành công sau khi vừa đăng ký xong --%>
-            <c:if test="${param.msg == 'success'}">
-                <div style="color: #155724; background-color: #d4edda; border: 1px solid #c3e6cb; padding: 10px; border-radius: 5px; font-size: 14px; text-align: center;">
-                    ✅ Đăng ký thành công! Mời bạn đăng nhập.
-                </div>
-            </c:if>
-        </div>
-
-        <form action="LoginController" method="post">
-            Email:<br>
-            <input type="email" name="email" required 
-                   style="width: 100%; padding: 10px; box-sizing: border-box; margin-bottom: 15px; border: 1px solid #ccc; border-radius: 4px;"><br>
+        <%
+            // Kiểm tra xem có thông báo lỗi từ Controller gửi về không
+            String error = request.getParameter("error");
+            if ("invalid".equals(error)) {
+        %>
+            <div class="alert alert-danger">
+                <i class="fa-solid fa-triangle-exclamation"></i> Sai Email hoặc Mật khẩu!
+            </div>
+        <% 
+            } 
             
-            Mật khẩu:<br>
-            <input type="password" name="password" required 
-                   style="width: 100%; padding: 10px; box-sizing: border-box; margin-bottom: 20px; border: 1px solid #ccc; border-radius: 4px;"><br>
+            // Kiểm tra xem có thông báo vừa đăng ký thành công nhảy sang không
+            String msg = request.getParameter("msg");
+            if ("success".equals(msg)) {
+        %>
+            <div class="alert alert-success">
+                <i class="fa-solid fa-circle-check"></i> Đăng ký thành công! Mời bạn đăng nhập.
+            </div>
+        <% 
+            } 
+        %>
+
+        <!-- Form gửi dữ liệu sang LoginServlet (Chính là đường dẫn của LoginController) -->
+        <form action="LoginServlet" method="POST">
+            <div class="form-group">
+                <label><i class="fa-solid fa-envelope"></i> Địa chỉ Email</label>
+                <input type="email" name="email" placeholder="Nhập email của bạn..." required>
+            </div>
             
-            <button type="submit" 
-                    style="width: 100%; background: #007bff; color: white; border: none; padding: 12px; cursor: pointer; border-radius: 5px; font-weight: bold; font-size: 16px;">
-                Đăng nhập
-            </button>
+            <div class="form-group">
+                <label><i class="fa-solid fa-key"></i> Mật khẩu</label>
+                <input type="password" name="password" placeholder="Nhập mật khẩu..." required>
+            </div>
+            
+            <button type="submit" class="btn-submit">Vào Hệ Thống</button>
         </form>
 
-        <p style="text-align: center; margin-top: 20px; font-size: 14px;">
-            Chưa có tài khoản? <a href="register.jsp" style="color: #007bff; text-decoration: none;">Đăng ký ngay</a>
-        </p>
+        <div class="footer-links">
+            <a href="index.jsp"><i class="fa-solid fa-house"></i> Quay lại trang chủ</a> 
+            | 
+            <a href="register.jsp">Đăng ký ngay</a>
+        </div>
     </div>
+
 </body>
 </html>

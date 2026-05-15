@@ -1,64 +1,161 @@
 <%@page contentType="text/html" pageEncoding="UTF-8"%>
-<%@taglib prefix="c" uri="jakarta.tags.core" %> 
-
 <!DOCTYPE html>
 <html>
 <head>
     <meta charset="UTF-8">
-    <title>Đăng ký tài khoản P2P</title>
+    <title>Đăng ký tài khoản</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        body { font-family: Arial, sans-serif; background-color: #f4f4f4; padding: 20px; }
+        .form-container { width: 450px; margin: 30px auto; padding: 25px; background: white; border-radius: 8px; box-shadow: 0px 0px 15px #ccc; }
+        .form-group { margin-bottom: 15px; position: relative; }
+        .form-group label { display: block; margin-bottom: 5px; font-weight: bold; }
+        .form-group input, .form-group select { width: 100%; padding: 10px; box-sizing: border-box; border: 1px solid #ccc; border-radius: 4px; }
+        .password-wrapper { position: relative; }
+        .toggle-password { position: absolute; right: 10px; top: 50%; transform: translateY(-50%); cursor: pointer; color: #666; }
+        .btn-submit { width: 100%; padding: 12px; background-color: #007bff; color: white; border: none; border-radius: 4px; font-size: 16px; cursor: pointer; }
+        .btn-submit:hover { background-color: #0056b3; }
+        .error-text { color: red; font-size: 13px; margin-top: 5px; display: none; }
+        .alert-error { color: red; background: #ffdada; padding: 10px; border-radius: 5px; text-align: center; margin-bottom: 15px; font-size: 14px; }
+        .login-link { text-align: center; margin-top: 20px; font-size: 15px; border-top: 1px solid #eee; padding-top: 15px; }
+        .login-link a { color: #007bff; text-decoration: none; font-weight: bold; }
+    </style>
 </head>
 <body>
-    <div style="width: 350px; margin: 50px auto; border: 1px solid #ddd; padding: 25px; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); font-family: Arial, sans-serif;">
-        <h2 style="text-align: center; color: #333; margin-bottom: 20px;">Đăng ký tài khoản</h2>
-
-        <!-- VÙNG THÔNG BÁO -->
-        <div style="margin-bottom: 15px;">
-            <%-- Trường hợp 1: Email đã tồn tại (Màu vàng - Warning) --%>
-            <c:if test="${param.error == 'exists'}">
-                <div style="color: #856404; background-color: #fff3cd; border: 1px solid #ffeeba; padding: 12px; border-radius: 6px; font-size: 14px; text-align: center; line-height: 1.5;">
-                    <strong>Thông báo:</strong> Email này đã được đăng ký trước đó.<br>
-                    Bạn có muốn <a href="login.jsp" style="color: #0056b3; font-weight: bold; text-decoration: underline;">Đăng nhập ngay</a> không?
-                </div>
-            </c:if>
-
-            <%-- Trường hợp 2: Mật khẩu không khớp (Màu đỏ - Error) --%>
-            <c:if test="${param.error == 'mismatch'}">
-                <div style="color: #721c24; background-color: #f8d7da; border: 1px solid #f5c6cb; padding: 12px; border-radius: 6px; font-size: 14px; text-align: center;">
-                    ⚠️ Mật khẩu xác nhận không khớp. Vui lòng nhập lại!
-                </div>
-            </c:if>
-
-            <%-- Trường hợp 3: Lỗi Server/Hệ thống (Màu đỏ đậm) --%>
-            <c:if test="${param.error == 'server'}">
-                <div style="color: #721c24; background-color: #f8d7da; border: 1px solid #f5c6cb; padding: 12px; border-radius: 6px; font-size: 14px; text-align: center;">
-                    ❌ Hệ thống đang gặp sự cố. Vui lòng thử lại sau vài phút.
-                </div>
-            </c:if>
-        </div>
-
-        <!-- FORM ĐĂNG KÝ -->
-        <form action="RegisterController" method="post">
-            <label style="font-weight: bold; font-size: 14px;">Email:</label><br>
-            <input type="email" name="email" required placeholder="example@gmail.com"
-                   style="width: 100%; padding: 10px; box-sizing: border-box; margin-top: 5px; margin-bottom: 15px; border: 1px solid #ccc; border-radius: 5px;"><br>
-            
-            <label style="font-weight: bold; font-size: 14px;">Mật khẩu:</label><br>
-            <input type="password" name="password" required 
-                   style="width: 100%; padding: 10px; box-sizing: border-box; margin-top: 5px; margin-bottom: 15px; border: 1px solid #ccc; border-radius: 5px;"><br>
-            
-            <label style="font-weight: bold; font-size: 14px;">Xác nhận mật khẩu:</label><br>
-            <input type="password" name="confirmPassword" required 
-                   style="width: 100%; padding: 10px; box-sizing: border-box; margin-top: 5px; margin-bottom: 20px; border: 1px solid #ccc; border-radius: 5px;"><br>
-            
-            <button type="submit" 
-                    style="width: 100%; background: #28a745; color: white; border: none; padding: 12px; cursor: pointer; border-radius: 6px; font-weight: bold; font-size: 16px;">
-                Tạo tài khoản
-            </button>
-        </form>
+    <div class="form-container">
+        <h2>Đăng ký hệ thống P2P</h2>
         
-        <p style="text-align: center; margin-top: 20px; font-size: 14px;">
-            Đã có tài khoản? <a href="login.jsp" style="color: #1a73e8; text-decoration: none; font-weight: bold;">Đăng nhập</a>
-        </p>
+        <%-- PHẦN BÁO LỖI CHI TIẾT --%>
+        <% 
+            String error = request.getParameter("error");
+            if ("emailExists".equals(error)) { 
+        %>
+            <div class="alert-error">Email này đã được sử dụng. Vui lòng chọn email khác!</div>
+        <% } else if ("dbError".equals(error)) { %>
+            <div class="alert-error">Lỗi: CCCD đã tồn tại hoặc hệ thống gặp sự cố!</div>
+        <% } %>
+        
+        <form action="RegisterController" method="POST" onsubmit="return validateForm()">
+            <div class="form-group">
+                <label>Bạn tham gia với vai trò:</label>
+                <select name="role" id="role" onchange="toggleRoleFields()" required>
+                    <option value="borrower">Người đi vay (Borrower)</option>
+                    <option value="investor">Nhà đầu tư (Investor)</option>
+                </select>
+            </div>
+            
+            <div class="form-group">
+                <label>Email:</label>
+                <input type="email" name="email" required>
+            </div>
+            
+            <div class="form-group">
+                <label>Số điện thoại:</label>
+                <input type="tel" name="phone" pattern="[0-9]{10}" placeholder="0912345678" required>
+            </div>
+            
+            <div class="form-group">
+                <label>Mật khẩu:</label>
+                <div class="password-wrapper">
+                    <input type="password" id="password" name="password" required>
+                    <i class="fa-solid fa-eye toggle-password" onclick="togglePasswordVisibility('password', this)"></i>
+                </div>
+                <div id="password-error" class="error-text">Mật khẩu tối thiểu 8 ký tự, có chữ hoa và ký tự đặc biệt.</div>
+            </div>
+            
+            <div class="form-group">
+                <label>Xác nhận mật khẩu:</label>
+                <div class="password-wrapper">
+                    <input type="password" id="confirmPassword" required>
+                    <i class="fa-solid fa-eye toggle-password" onclick="togglePasswordVisibility('confirmPassword', this)"></i>
+                </div>
+                <div id="confirm-error" class="error-text">Mật khẩu xác nhận không đúng!</div>
+            </div>
+            
+            <div class="form-group">
+                <label>Tên:</label>
+                <input type="text" name="firstName" required>
+            </div>
+            
+            <div class="form-group">
+                <label>Họ:</label>
+                <input type="text" name="lastName" required>
+            </div>
+
+            <div id="borrowerFields">
+                <div class="form-group">
+                    <label>Số CCCD (12 số):</label>
+                    <input type="text" name="idCardNumber" id="idCardNumber">
+                </div>
+                <div class="form-group">
+                    <label>Thu nhập (VND):</label>
+                    <input type="number" name="monthlyIncome" id="monthlyIncome">
+                </div>
+            </div>
+
+            <div id="investorFields" style="display: none;">
+                <div class="form-group">
+                    <label>Khẩu vị rủi ro:</label>
+                    <select name="riskAppetite" id="riskAppetite">
+                        <option value="Conservative">An toàn</option>
+                        <option value="Moderate">Trung dung</option>
+                        <option value="Aggressive">Mạo hiểm</option>
+                    </select>
+                </div>
+            </div>
+
+            <button type="submit" class="btn-submit">Hoàn tất đăng ký</button>
+        </form>
+
+        <%-- DÒNG CHUYỂN HƯỚNG SANG LOGIN --%>
+        <div class="login-link">
+            Bạn đã có tài khoản? <a href="login.jsp">Đăng nhập ngay</a>
+        </div>
     </div>
+
+    <script>
+        function togglePasswordVisibility(inputId, icon) {
+            const input = document.getElementById(inputId);
+            input.type = input.type === "password" ? "text" : "password";
+            icon.classList.toggle("fa-eye");
+            icon.classList.toggle("fa-eye-slash");
+        }
+
+        function toggleRoleFields() {
+            const role = document.getElementById("role").value;
+            const isBorrower = role === "borrower";
+            document.getElementById("borrowerFields").style.display = isBorrower ? "block" : "none";
+            document.getElementById("investorFields").style.display = isBorrower ? "none" : "block";
+            document.getElementById("idCardNumber").required = isBorrower;
+            document.getElementById("monthlyIncome").required = isBorrower;
+        }
+
+        function validateForm() {
+            const password = document.getElementById("password").value;
+            const confirmPassword = document.getElementById("confirmPassword").value;
+            const role = document.getElementById("role").value;
+            const passwordPattern = /^(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*(),.?":{}|<>])[A-Za-z\d!@#$%^&*(),.?":{}|<>]{8,}$/;
+
+            document.getElementById("password-error").style.display = "none";
+            document.getElementById("confirm-error").style.display = "none";
+
+            if (!passwordPattern.test(password)) {
+                document.getElementById("password-error").style.display = "block";
+                return false;
+            }
+            if (password !== confirmPassword) {
+                document.getElementById("confirm-error").style.display = "block";
+                return false;
+            }
+            if (role === "borrower") {
+                const idCard = document.getElementById("idCardNumber").value;
+                if (!/^[0-9]{12}$/.test(idCard)) {
+                    alert("CCCD phải có đúng 12 chữ số!");
+                    return false;
+                }
+            }
+            return true;
+        }
+    </script>
 </body>
 </html>

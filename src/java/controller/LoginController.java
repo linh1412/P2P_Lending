@@ -36,14 +36,40 @@ public class LoginController extends HttpServlet {
             session.setAttribute("email", userEmail);
             session.setAttribute("role", role);
 
-            // PHÂN QUYỀN: Admin vào thẳng Dashboard, User/Investor đi làm eKYC
+            // PHÂN QUYỀN VÀ PHÂN LUỒNG TRẠNG THÁI EKYC CHÍNH XÁC
             if ("admin".equals(role)) {
                 response.sendRedirect("admin-dashboard.jsp");
-            } else {
-                // Ép cả Borrower và Investor sang trang eKYC
-                response.sendRedirect("ekyc.jsp");
+            } 
+            else if ("borrower".equals(role)) {
+                // Kiểm tra xem Borrower đã nộp đủ hồ sơ ảnh giấy tờ chưa
+                boolean hasSubmittedEKYC = userDAO.checkBorrowerEKYC(userId);
+                
+                if (hasSubmittedEKYC) {
+                    // Đã nộp hồ sơ hợp lệ -> Vào thẳng borrower_dashboard.jsp
+                    response.sendRedirect("borrower_dashboard.jsp");
+                } else {
+                    // Chưa gửi hồ sơ giấy tờ -> Chuyển đến trang đăng tải eKYC
+                    response.sendRedirect("ekyc.jsp");
+                }
+            } 
+            else if ("investor".equals(role)) {
+                // Kiểm tra xem Investor đã nộp đủ hồ sơ ảnh giấy tờ chưa
+                boolean hasSubmittedEKYC = userDAO.checkInvestorEKYC(userId);
+                
+                if (hasSubmittedEKYC) {
+                    // Đã nộp hồ sơ hợp lệ -> Chuyển đến trang quản lý của Investor
+                    response.sendRedirect("investor_dashboard.jsp");
+                } else {
+                    // Chưa gửi hồ sơ giấy tờ -> Chuyển đến trang đăng tải eKYC
+                    response.sendRedirect("ekyc.jsp");
+                }
+            } 
+            else {
+                response.sendRedirect("login.jsp");
             }
+            
         } else {
+            // Chuyển hướng kèm tham số báo lỗi mật khẩu/email sai
             response.sendRedirect("login.jsp?error=invalid");
         }
     }

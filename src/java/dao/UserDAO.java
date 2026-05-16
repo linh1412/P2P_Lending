@@ -56,7 +56,7 @@ public class UserDAO {
 
             // Chèn vào bảng con tương ứng
             if ("borrower".equals(role)) {
-                String sqlBorrower = "INSERT INTO borrowers (borrower_id, first_name, last_name, id_card_number, monthly_income) VALUES (?, ?, ?, ?, ?)";
+                String sqlBorrower = "INSERT INTO borrowers (borrower_id, first_name, last_name, id_card_number, monthly_income, verification_status) VALUES (?, ?, ?, ?, ?, 'pending')";
                 psProfile = conn.prepareStatement(sqlBorrower);
                 psProfile.setLong(1, generatedUserId);
                 psProfile.setString(2, firstName);
@@ -121,6 +121,62 @@ public class UserDAO {
             ps.setString(2, type);
             ps.setString(3, url);
             return ps.executeUpdate() > 0;
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return false;
+    }
+
+    // 5. Kiểm tra xem Borrower đã thực sự hoàn thành tải giấy tờ eKYC lên chưa
+    public boolean checkBorrowerEKYC(long userId) {
+        String sqlCheckDocs = "SELECT COUNT(DISTINCT document_type) FROM documents WHERE user_id = ? AND document_type IN ('id_card_front', 'id_card_back')";
+        String sqlCheckStatus = "SELECT verification_status FROM borrowers WHERE borrower_id = ?";
+        
+        try (Connection conn = DBConnection.getConnection()) {
+            
+            // BƯỚC A: Kiểm tra xem trạng thái tài khoản có bị Admin Từ Chối (rejected) hay không
+            try (PreparedStatement psStatus = conn.prepareStatement(sqlCheckStatus)) {
+                psStatus.setLong(1, userId);
+                try (ResultSet rsStatus = psStatus.executeQuery()) {
+                    if (rsStatus.next()) {
+                        String status = rsStatus.getString("verification_status");
+                        if ("rejected".equals(status)) {
+                            return false; 
+                        }
+                    }
+                }
+            }
+            
+            // BƯỚC B: Kiểm tra xem đã upload đủ 2 mặt CMND/CCCD chưa
+            try (PreparedStatement psDocs = conn.prepareStatement(sqlCheckDocs)) {
+                psDocs.setLong(1, userId);
+                try (ResultSet rsDocs = psDocs.executeQuery()) {
+                    if (rsDocs.next()) {
+                        int docCount = rsDocs.getInt(1);
+                        return docCount >= 2; 
+                    }
+                }
+            }
+            
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return false;
+    }
+
+    // 6. Hàm MỚI: Kiểm tra xem Investor đã thực sự tải giấy tờ eKYC lên chưa
+    public boolean checkInvestorEKYC(long userId) {
+        String sqlCheckDocs = "SELECT COUNT(DISTINCT document_type) FROM documents WHERE user_id = ? AND document_type IN ('id_card_front', 'id_card_back')";
+        try (Connection conn = DBConnection.getConnection();
+             PreparedStatement psDocs = conn.prepareStatement(sqlCheckDocs)) {
+            
+            psDocs.setLong(1, userId);
+            try (ResultSet rsDocs = psDocs.executeQuery()) {
+                if (rsDocs.next()) {
+                    int docCount = rsDocs.getInt(1);
+                    return docCount >= 2; // Đã tải lên ít nhất cả mặt trước và mặt sau
+                }
+            }
         } catch (Exception e) {
             e.printStackTrace();
         }

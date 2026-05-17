@@ -11,14 +11,14 @@ import java.util.List;
 
 public class BorrowerDAO {
 
-    // 1. Lấy thông tin cơ bản của Borrower dựa trên user_id đăng nhập
-    public Borrower getBorrowerById(long userId) {
+    // 1. Lấy thông tin cơ bản của Borrower dựa trên ID người dùng đăng nhập (chính là borrower_id)
+    public Borrower getBorrowerById(long borrowerId) {
         String sql = "SELECT borrower_id, first_name, last_name, verification_status, monthly_income " +
-                     "FROM borrowers WHERE user_id = ?";
+                     "FROM borrowers WHERE borrower_id = ?";
         try (Connection conn = DBConnection.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql)) {
             
-            ps.setLong(1, userId);
+            ps.setLong(1, borrowerId);
             try (ResultSet rs = ps.executeQuery()) {
                 if (rs.next()) {
                     Borrower b = new Borrower();
@@ -36,17 +36,16 @@ public class BorrowerDAO {
         return null;
     }
 
-    // 2. KẾT HỢP CÁC BẢNG: Tính tổng dư nợ thực tế của các khoản vay đang hoạt động (active)
-    public double getCurrentDebt(long userId) {
+    // 2. Tính tổng dư nợ thực tế từ các khoản vay đang hoạt động
+    public double getCurrentDebt(long borrowerId) {
         double totalDebt = 0.0;
         String sql = "SELECT SUM(l.total_amount) FROM loans l " +
                      "INNER JOIN loan_applications la ON l.application_id = la.application_id " +
-                     "INNER JOIN borrowers b ON la.borrower_id = b.borrower_id " +
-                     "WHERE b.user_id = ? AND l.status = 'active'";
+                     "WHERE la.borrower_id = ? AND l.status = 'active'";
         try (Connection conn = DBConnection.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql)) {
             
-            ps.setLong(1, userId);
+            ps.setLong(1, borrowerId);
             try (ResultSet rs = ps.executeQuery()) {
                 if (rs.next()) {
                     totalDebt = rs.getDouble(1);
@@ -58,22 +57,19 @@ public class BorrowerDAO {
         return totalDebt;
     }
 
-    // 3. Lấy danh sách hồ sơ đơn vay của Borrower (Map chuẩn 100% theo file LoanApplication của bạn)
-    public List<LoanApplication> getLoansByBorrower(long userId) {
+    // 3. Lấy danh sách hồ sơ đơn vay của Borrower (Map chuẩn theo file LoanApplication.java)
+    public List<LoanApplication> getLoansByBorrower(long borrowerId) {
         List<LoanApplication> list = new ArrayList<>();
-        String sql = "SELECT la.application_id, la.amount_requested, la.term_months, la.created_at, la.cic_pdf_url, la.status " +
-                     "FROM loan_applications la " +
-                     "INNER JOIN borrowers b ON la.borrower_id = b.borrower_id " +
-                     "WHERE b.user_id = ?";
+        String sql = "SELECT application_id, amount_requested, term_months, created_at, cic_pdf_url, status " +
+                     "FROM loan_applications WHERE borrower_id = ?";
         try (Connection conn = DBConnection.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql)) {
             
-            ps.setLong(1, userId);
+            ps.setLong(1, borrowerId);
             try (ResultSet rs = ps.executeQuery()) {
                 while (rs.next()) {
                     LoanApplication loan = new LoanApplication();
                     
-                    // Đã đồng bộ hoàn toàn với file Model của bạn:
                     loan.setApplicationId(rs.getLong("application_id")); 
                     loan.setAmountRequested(rs.getDouble("amount_requested")); 
                     loan.setTermMonths(rs.getInt("term_months")); 

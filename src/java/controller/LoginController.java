@@ -24,43 +24,47 @@ public class LoginController extends HttpServlet {
         String email = request.getParameter("email");
         String password = request.getParameter("password");
 
-        String[] result = userDAO.loginCheck(email, password);
+        if (email == null || password == null || email.trim().isEmpty() || password.trim().isEmpty()) {
+            request.setAttribute("errorMessage", "Vui lòng điền đầy đủ thông tin!");
+            request.getRequestDispatcher("login.jsp").forward(request, response);
+            return;
+        }
+
+        String[] result = userDAO.loginCheck(email.trim(), password);
 
         if (result != null) {
             HttpSession session = request.getSession();
             long userId = Long.parseLong(result[0]); 
             String userEmail = result[1];
-            String role = result[2];
+            String role = result[2]; // 'admin', 'borrower', hoặc 'investor'
 
+            // Lưu thông tin vào Session để các trang sau sử dụng
             session.setAttribute("userId", userId);
             session.setAttribute("email", userEmail);
             session.setAttribute("role", role);
 
-            // PHÂN QUYỀN VÀ PHÂN LUỒNG TRẠNG THÁI EKYC CHÍNH XÁC
+            // Kiểm tra trạng thái hồ sơ eKYC trong cơ sở dữ liệu
+            boolean hasSubmittedEKYC = userDAO.checkUserEKYC(userId);
+
+            // LUỒNG PHÂN QUYỀN VÀ ĐIỀU HƯỚNG CHÍNH XÁC
             if ("admin".equals(role)) {
                 response.sendRedirect("admin-dashboard.jsp");
             } 
             else if ("borrower".equals(role)) {
-                // Kiểm tra xem Borrower đã nộp đủ hồ sơ ảnh giấy tờ chưa
-                boolean hasSubmittedEKYC = userDAO.checkBorrowerEKYC(userId);
-                
                 if (hasSubmittedEKYC) {
-                    // Đã nộp hồ sơ hợp lệ -> Vào thẳng borrower_dashboard.jsp
+                    // Lần đăng nhập thứ 2 trở đi (Đã có eKYC) -> Vào thẳng dashboard người vay
                     response.sendRedirect("borrower_dashboard.jsp");
                 } else {
-                    // Chưa gửi hồ sơ giấy tờ -> Chuyển đến trang đăng tải eKYC
+                    // Lần đầu đăng nhập (Chưa có eKYC) -> Bắt buộc sang trang ekyc.jsp
                     response.sendRedirect("ekyc.jsp");
                 }
             } 
             else if ("investor".equals(role)) {
-                // Kiểm tra xem Investor đã nộp đủ hồ sơ ảnh giấy tờ chưa
-                boolean hasSubmittedEKYC = userDAO.checkInvestorEKYC(userId);
-                
                 if (hasSubmittedEKYC) {
-                    // Đã nộp hồ sơ hợp lệ -> Chuyển đến trang quản lý của Investor
+                    // Lần đăng nhập thứ 2 trở đi (Đã có eKYC) -> Vào thẳng dashboard nhà đầu tư
                     response.sendRedirect("investor_dashboard.jsp");
                 } else {
-                    // Chưa gửi hồ sơ giấy tờ -> Chuyển đến trang đăng tải eKYC
+                    // Lần đầu đăng nhập (Chưa có eKYC) -> Bắt buộc sang trang ekyc.jsp
                     response.sendRedirect("ekyc.jsp");
                 }
             } 
@@ -69,8 +73,8 @@ public class LoginController extends HttpServlet {
             }
             
         } else {
-            // Chuyển hướng kèm tham số báo lỗi mật khẩu/email sai
-            response.sendRedirect("login.jsp?error=invalid");
+            request.setAttribute("errorMessage", "Email hoặc mật khẩu không chính xác!");
+            request.getRequestDispatcher("login.jsp").forward(request, response);
         }
     }
 

@@ -28,31 +28,43 @@ public class EKycController extends HttpServlet {
         
         HttpSession session = request.getSession();
         Long userId = (Long) session.getAttribute("userId"); 
-        String role = (String) session.getAttribute("role"); 
+        String role = (String) session.getAttribute("role"); // Lấy vai trò từ Session lúc đăng nhập
         
         if (userId == null) {
             response.sendRedirect("login.jsp");
             return;
         }
 
-        // 1. Xác định thư mục lưu ảnh
+        // Cấu hình thư mục lưu ảnh
         String uploadPath = getServletContext().getRealPath("") + File.separator + "uploads";
         File uploadDir = new File(uploadPath);
-        if (!uploadDir.exists()) uploadDir.mkdir();
+        if (!uploadDir.exists()) {
+            uploadDir.mkdir();
+        }
 
         try {
-            // 2. Xử lý lưu 3 ảnh vào thư mục và Database
-            saveDocument(request.getPart("frontImg"), userId, "id_card_front", uploadPath);
-            saveDocument(request.getPart("backImg"), userId, "id_card_back", uploadPath);
-            saveDocument(request.getPart("faceImg"), userId, "other", uploadPath);
+            Part frontPart = request.getPart("frontImg");
+            Part backPart = request.getPart("backImg");
+            Part facePart = request.getPart("faceImg");
 
-            // 3. ĐIỀU HƯỚNG DỰA TRÊN VAI TRÒ (ROLE)
+            // Kiểm tra tính hợp lệ (Tránh gửi form trống ảnh)
+            if (isEmpty(frontPart) || isEmpty(backPart) || isEmpty(facePart)) {
+                response.sendRedirect("ekyc.jsp?error=missingFiles");
+                return;
+            }
+
+            // Lưu 3 file vật lý và lưu thông tin vào bảng documents
+            saveDocument(frontPart, userId, "id_card_front", uploadPath);
+            saveDocument(backPart, userId, "id_card_back", uploadPath);
+            saveDocument(facePart, userId, "other", uploadPath);
+
+            // TỰ ĐỘNG CHUYỂN HƯỚNG SANG TRANG DASHBOARD TƯƠNG ỨNG SAU KHI GỬI EKYC XONG
             if ("borrower".equals(role)) {
-                // Đẩy về Dashboard người vay
-                response.sendRedirect("borrower-dashboard.jsp?msg=ekycSubmitted");
+                // Nếu là Borrower -> Sang trang quản lý người vay
+                response.sendRedirect("borrower_dashboard.jsp?msg=ekycSubmitted");
             } else if ("investor".equals(role)) {
-                // Đẩy về Dashboard nhà đầu tư
-                response.sendRedirect("investor-dashboard.jsp?msg=ekycSubmitted");
+                // Nếu là Investor -> Sang trang quản lý nhà đầu tư
+                response.sendRedirect("investor_dashboard.jsp?msg=ekycSubmitted");
             } else {
                 response.sendRedirect("index.jsp");
             }
@@ -65,16 +77,17 @@ public class EKycController extends HttpServlet {
 
     private void saveDocument(Part part, Long userId, String type, String uploadPath) throws IOException {
         if (part != null && part.getSize() > 0) {
-            // Tạo tên file: userId_loai_timestamp.jpg
             String fileName = userId + "_" + type + "_" + System.currentTimeMillis() + ".jpg";
             String fullPath = uploadPath + File.separator + fileName;
             
-            // Lưu file vật lý
             part.write(fullPath);
             
-            // Lưu vào DB
             String fileUrl = "uploads/" + fileName;
             userDAO.insertDocument(userId, type, fileUrl);
         }
+    }
+
+    private boolean isEmpty(Part part) {
+        return part == null || part.getSize() == 0;
     }
 }

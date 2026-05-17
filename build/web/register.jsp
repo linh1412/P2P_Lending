@@ -31,6 +31,9 @@
             if ("emailExists".equals(error)) { 
         %>
             <div class="alert-error">Email này đã được sử dụng. Vui lòng chọn email khác!</div>
+        <% } else if ("invalidEmail".equals(error)) { %>
+            <%-- ĐÃ THÊM: Hiển thị lỗi trả về từ Backend --%>
+            <div class="alert-error">Đăng ký thất bại: Định dạng email không hợp lệ!</div>
         <% } else if ("dbError".equals(error)) { %>
             <div class="alert-error">Lỗi: CCCD đã tồn tại hoặc hệ thống gặp sự cố!</div>
         <% } %>
@@ -46,7 +49,10 @@
             
             <div class="form-group">
                 <label>Email:</label>
-                <input type="email" name="email" required>
+                <%-- Đust id và placeholder để người dùng dễ nhìn --%>
+                <input type="email" name="email" id="email" placeholder="example@gmail.com" required>
+                <%-- ĐÃ THÊM: Thẻ div hiển thị lỗi real-time cho ô email --%>
+                <div id="email-error" class="error-text">Cấu trúc email không đúng (Ví dụ hợp lệ: abc@gmail.com).</div>
             </div>
             
             <div class="form-group">
@@ -131,26 +137,43 @@
         }
 
         function validateForm() {
+            const email = document.getElementById("email").value;
             const password = document.getElementById("password").value;
             const confirmPassword = document.getElementById("confirmPassword").value;
             const role = document.getElementById("role").value;
+            
+            // Định nghĩa Regex kiểm tra cấu trúc email (yêu cầu nghiêm ngặt phần tên miền)
+            const emailPattern = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
             const passwordPattern = /^(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*(),.?":{}|<>])[A-Za-z\d!@#$%^&*(),.?":{}|<>]{8,}$/;
 
+            // Ẩn toàn bộ thông báo lỗi trước khi kiểm tra lại
+            document.getElementById("email-error").style.display = "none";
             document.getElementById("password-error").style.display = "none";
             document.getElementById("confirm-error").style.display = "none";
 
+            // 1. ĐÃ THÊM: Kiểm tra cấu trúc Email bằng Javascript
+            if (!emailPattern.test(email)) {
+                document.getElementById("email-error").style.display = "block";
+                document.getElementById("email").focus();
+                return false;
+            }
+
+            // 2. Kiểm tra mật khẩu
             if (!passwordPattern.test(password)) {
                 document.getElementById("password-error").style.display = "block";
+                document.getElementById("password").focus();
                 return false;
             }
             if (password !== confirmPassword) {
                 document.getElementById("confirm-error").style.display = "block";
+                document.getElementById("confirmPassword").focus();
                 return false;
             }
             if (role === "borrower") {
                 const idCard = document.getElementById("idCardNumber").value;
                 if (!/^[0-9]{12}$/.test(idCard)) {
                     alert("CCCD phải có đúng 12 chữ số!");
+                    document.getElementById("idCardNumber").focus();
                     return false;
                 }
             }

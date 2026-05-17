@@ -26,6 +26,17 @@ public class RegisterController extends HttpServlet {
         String firstName = request.getParameter("firstName");
         String lastName = request.getParameter("lastName");
 
+        // === BƯỚC MỚI: Kiểm tra cấu trúc định dạng Email bằng Regex ===
+        // Định dạng yêu cầu: phải có ký tự hợp lệ trước @, có tên miền và đuôi mở rộng (ví dụ: .com, .vn, .edu.vn,...)
+        String emailRegex = "^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$";
+        
+        if (email == null || !email.matches(emailRegex)) {
+            // Nếu không đúng định dạng email, chặn lại và trả về trang đăng ký với mã lỗi invalidEmail
+            response.sendRedirect("register.jsp?error=invalidEmail");
+            return; // Dừng xử lý các bước tiếp theo
+        }
+        // ============================================================
+
         // 1. Kiểm tra email đã tồn tại trong hệ thống chưa
         if (userDAO.isEmailExists(email)) {
             response.sendRedirect("register.jsp?error=emailExists");

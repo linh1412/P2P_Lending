@@ -182,4 +182,27 @@ public class UserDAO {
         }
         return false;
     }
+
+    // 7. Hàm tích hợp tổng hợp: Phục vụ trực tiếp luồng check eKYC của LoginController
+    public boolean checkUserEKYC(long userId) {
+        String sqlFetchRole = "SELECT role FROM users WHERE user_id = ?";
+        try (Connection conn = DBConnection.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sqlFetchRole)) {
+            
+            ps.setLong(1, userId);
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) {
+                    String role = rs.getString("role");
+                    if ("borrower".equals(role)) {
+                        return checkBorrowerEKYC(userId);
+                    } else if ("investor".equals(role)) {
+                        return checkInvestorEKYC(userId);
+                    }
+                }
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return false;
+    }
 }

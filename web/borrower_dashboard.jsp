@@ -66,14 +66,14 @@
         <div>
             <div class="sidebar-brand">🏛️ <span>P2P LENDING</span></div>
             <ul class="sidebar-menu">
-                <li class="${currentAction == 'dashboard' || empty currentAction ? 'active' : ''}">
-                    <a href="${pageContext.request.contextPath}/borrower_dashboard?action=dashboard">📊 Tổng Quan Main</a>
+                <li class="${currentAction == 'dashboard' ? 'active' : ''}">
+                    <a href="${pageContext.request.contextPath}/BorrowerDashboardServlet?action=dashboard">📊 Tổng Quan Main</a>
                 </li>
                 <li class="${currentAction == 'create_loan' ? 'active' : ''}">
-                    <a href="${pageContext.request.contextPath}/borrower_dashboard?action=create_loan">📝 Đăng Ký Vay Mới</a>
+                    <a href="${pageContext.request.contextPath}/BorrowerDashboardServlet?action=create_loan">📝 Đăng Ký Vay Mới</a>
                 </li>
                 <li class="${currentAction == 'market_loans' ? 'active' : ''}">
-                    <a href="${pageContext.request.contextPath}/borrower_dashboard?action=market_loans">🌐 Khoản Vay Trên Sàn</a>
+                    <a href="${pageContext.request.contextPath}/BorrowerDashboardServlet?action=market_loans">🌐 Khoản Vay Trên Sàn</a>
                 </li>
             </ul>
         </div>
@@ -111,7 +111,7 @@
         <div class="container">
             <c:choose>
                 <%-- TAB 1: TỔNG QUAN MAIN --%>
-                <c:when test="${currentAction == 'dashboard' || empty currentAction}">
+                <c:when test="${currentAction == 'dashboard'}">
                     <div class="stats-grid">
                         <div class="stat-card">
                             <div class="stat-info">
@@ -151,19 +151,20 @@
                                     <c:when test="${not empty myLoansList}">
                                         <c:forEach var="myLoan" items="${myLoansList}">
                                             <tr>
-                                                <td><strong><c:out value="${myLoan[0]}"/></strong></td>
-                                                <td><strong><fmt:formatNumber value="${myLoan[1]}" type="number" groupingUsed="true"/> đ</strong></td>
-                                                <td><c:out value="${myLoan[2]}"/> Tháng</td>
-                                                <td><fmt:formatDate value="${myLoan[3]}" pattern="dd/MM/yyyy HH:mm"/></td>
+                                                <td><strong>#<c:out value="${myLoan.loanId}"/></strong></td>
+                                                <td><strong><fmt:formatNumber value="${myLoan.loanAmount}" type="number" groupingUsed="true"/> đ</strong></td>
+                                                <td><c:out value="${myLoan.tenureMonths}"/> Tháng</td>
+                                                <td><fmt:formatDate value="${myLoan.createdAt}" pattern="dd/MM/yyyy HH:mm"/></td>
                                                 <td>
-                                                    <c:if test="${not empty myLoan[4]}">
-                                                        <a href="<c:out value='${myLoan[4]}'/>" target="_blank" style="color:var(--primary-color); text-decoration:none; font-weight: 500;">📄 Xem PDF</a>
+                                                    <c:if test="${not empty myLoan.pdfUrl}">
+                                                        <a href="<c:out value='${myLoan.pdfUrl}'/>" target="_blank" style="color:var(--primary-color); text-decoration:none; font-weight: 500;">📄 Xem PDF</a>
                                                     </c:if>
                                                 </td>
                                                 <td>
                                                     <c:choose>
-                                                        <c:when test="${myLoan[5] == 'pending'}"><span style="color:#a16207; font-weight:600;">Chờ duyệt</span></c:when>
-                                                        <c:when test="${myLoan[5] == 'approved'}"><span style="color:#2563eb; font-weight:600;">Đã duyệt</span></c:when>
+                                                        <c:when test="${myLoan.status == 'pending'}"><span style="color:#a16207; font-weight:600;">Chờ duyệt</span></c:when>
+                                                        <c:when test="${myLoan.status == 'approved'}"><span style="color:#2563eb; font-weight:600;">Đã duyệt</span></c:when>
+                                                        <c:when test="${myLoan.status == 'funded'}"><span style="color:#16a34a; font-weight:600;">Đã gọi vốn</span></c:when>
                                                         <c:otherwise><span style="color:#dc2626; font-weight:600;">Từ chối</span></c:otherwise>
                                                     </c:choose>
                                                 </td>
@@ -185,7 +186,7 @@
                         <c:when test="${trangThaiEkyc == 'verified'}">
                             <div class="data-card" style="max-width: 600px; margin: 0 auto;">
                                 <h4>📝 Tạo Đơn Đăng Ký Vay Mới</h4>
-                                <form action="${pageContext.request.contextPath}/borrower_dashboard" method="POST" id="loanForm" onsubmit="return validateForm()">
+                                <form action="${pageContext.request.contextPath}/BorrowerDashboardServlet" method="POST" id="loanForm" onsubmit="return validateForm()">
                                     <input type="hidden" name="action" value="submit_loan">
                                     
                                     <div class="form-group">
@@ -236,7 +237,7 @@
                                     <th>SỐ TIỀN VAY</th>
                                     <th>KỲ HẠN</th>
                                     <th>NỘI DUNG</th>
-                                    <th>TIẾN ĐỘ GOI VỐN</th>
+                                    <th>TIẾN ĐỘ GỌI VỐN</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -272,7 +273,6 @@
     </div>
 
     <script>
-        // Hiển thị số tiền dạng có dấu phân cách nghìn khi người dùng nhập vào ô vay tiền
         function previewCurrency(value) {
             const previewDiv = document.getElementById('currencyPreview');
             if (!value || isNaN(value)) {
@@ -286,7 +286,6 @@
             previewDiv.innerText = '👉 Bằng chữ/Định dạng: ' + formatter.format(value);
         }
 
-        // Kiểm tra dữ liệu trước khi submit đơn đăng ký vay
         function validateForm() {
             const soTienVay = parseFloat(document.getElementById('soTienVay').value);
             const hanMucToiDa = parseFloat("${not empty hanMucToiDa ? hanMucToiDa : 0}");
@@ -298,7 +297,6 @@
                 return false;
             }
             
-            // Xóa giờ phút giây để so sánh ngày chuẩn xác
             today.setHours(0,0,0,0);
             if (ngayCapCic > today) {
                 alert("Ngày cấp hồ sơ CIC không được là ngày trong tương lai!");

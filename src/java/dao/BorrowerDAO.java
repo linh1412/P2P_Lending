@@ -1,40 +1,23 @@
 package dao;
 
-import java.sql.*;
-import java.util.ArrayList;
-import java.util.List;
+import util.DBConnection;
 import model.Borrower;
 import model.LoanApplication;
-import util.DBConnection;
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.util.ArrayList;
+import java.util.List;
 
 public class BorrowerDAO {
 
-    // 1. Kiểm tra tồn tại (Dùng để quyết định Insert hay Update)
-    public boolean isBorrowerExists(long userId) throws SQLException {
-        String sql = "SELECT 1 FROM borrowers WHERE borrower_id = ?";
+    // 1. Lấy thông tin cơ bản của Borrower dựa trên user_id đăng nhập
+    public Borrower getBorrowerById(long userId) {
+        String sql = "SELECT borrower_id, first_name, last_name, verification_status, monthly_income " +
+                     "FROM borrowers WHERE user_id = ?";
         try (Connection conn = DBConnection.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql)) {
-            ps.setLong(1, userId);
-            try (ResultSet rs = ps.executeQuery()) { return rs.next(); }
-        }
-    }
-
-    // 2. Cảnh báo trùng CCCD: Kiểm tra xem số CCCD đã có ai dùng chưa (loại trừ chính mình)
-    public boolean isIdCardExists(String idCard, long currentBorrowerId) throws SQLException {
-        String sql = "SELECT 1 FROM borrowers WHERE id_card_number = ? AND borrower_id != ?";
-        try (Connection conn = DBConnection.getConnection();
-             PreparedStatement ps = conn.prepareStatement(sql)) {
-            ps.setString(1, idCard);
-            ps.setLong(2, currentBorrowerId);
-            try (ResultSet rs = ps.executeQuery()) { return rs.next(); }
-        }
-    }
-
-    // 3. Lấy dữ liệu: KHÔNG gọi cột id_image_url để tránh lỗi SQL
-    public Borrower getBorrowerById(long userId) throws SQLException {
-        String sql = "SELECT borrower_id, first_name, last_name, id_card_number, verification_status, monthly_income FROM borrowers WHERE borrower_id = ?";
-        try (Connection conn = DBConnection.getConnection();
-             PreparedStatement ps = conn.prepareStatement(sql)) {
+            
             ps.setLong(1, userId);
             try (ResultSet rs = ps.executeQuery()) {
                 if (rs.next()) {
@@ -42,53 +25,67 @@ public class BorrowerDAO {
                     b.setBorrowerId(rs.getLong("borrower_id"));
                     b.setFirstName(rs.getString("first_name"));
                     b.setLastName(rs.getString("last_name"));
-                    b.setIdCardNumber(rs.getString("id_card_number"));
                     b.setVerificationStatus(rs.getString("verification_status"));
                     b.setMonthlyIncome(rs.getDouble("monthly_income"));
                     return b;
                 }
             }
+        } catch (Exception e) {
+            e.printStackTrace();
         }
         return null;
     }
 
-    // 4. Cập nhật hồ sơ: Đưa trạng thái về 'pending' để chờ duyệt
-    public boolean updateProfile(Borrower b) throws SQLException {
-        String sql = "INSERT INTO borrowers (borrower_id, first_name, last_name, id_card_number, monthly_income, verification_status) "
-                   + "VALUES (?, ?, ?, ?, ?, 'pending') "
-                   + "ON DUPLICATE KEY UPDATE first_name=?, last_name=?, id_card_number=?, monthly_income=?, verification_status='pending'";
-        
+    // 2. KẾT HỢP CÁC BẢNG: Tính tổng dư nợ thực tế của các khoản vay đang hoạt động (active)
+    public double getCurrentDebt(long userId) {
+        double totalDebt = 0.0;
+        String sql = "SELECT SUM(l.total_amount) FROM loans l " +
+                     "INNER JOIN loan_applications la ON l.application_id = la.application_id " +
+                     "INNER JOIN borrowers b ON la.borrower_id = b.borrower_id " +
+                     "WHERE b.user_id = ? AND l.status = 'active'";
         try (Connection conn = DBConnection.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql)) {
-            ps.setLong(1, b.getBorrowerId());
-            ps.setString(2, b.getFirstName());
-            ps.setString(3, b.getLastName());
-            ps.setString(4, b.getIdCardNumber());
-            ps.setDouble(5, b.getMonthlyIncome());
-            ps.setString(6, b.getFirstName());
-            ps.setString(7, b.getLastName());
-            ps.setString(8, b.getIdCardNumber());
-            ps.setDouble(9, b.getMonthlyIncome());
-            return ps.executeUpdate() > 0;
+            
+            ps.setLong(1, userId);
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) {
+                    totalDebt = rs.getDouble(1);
+                }
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
         }
+        return totalDebt;
     }
 
-    public List<LoanApplication> getLoansByBorrower(long userId) throws SQLException {
+    // 3. Lấy danh sách hồ sơ đơn vay của Borrower (Map chuẩn 100% theo file LoanApplication của bạn)
+    public List<LoanApplication> getLoansByBorrower(long userId) {
         List<LoanApplication> list = new ArrayList<>();
-        String sql = "SELECT * FROM loan_applications WHERE borrower_id = ?";
+        String sql = "SELECT la.application_id, la.amount_requested, la.term_months, la.created_at, la.cic_pdf_url, la.status " +
+                     "FROM loan_applications la " +
+                     "INNER JOIN borrowers b ON la.borrower_id = b.borrower_id " +
+                     "WHERE b.user_id = ?";
         try (Connection conn = DBConnection.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql)) {
+            
             ps.setLong(1, userId);
             try (ResultSet rs = ps.executeQuery()) {
                 while (rs.next()) {
                     LoanApplication loan = new LoanApplication();
-                    loan.setApplicationId(rs.getLong("application_id"));
-                    loan.setAmountRequested(rs.getDouble("amount_requested"));
-                    loan.setTermMonths(rs.getInt("term_months"));
+                    
+                    // Đã đồng bộ hoàn toàn với file Model của bạn:
+                    loan.setApplicationId(rs.getLong("application_id")); 
+                    loan.setAmountRequested(rs.getDouble("amount_requested")); 
+                    loan.setTermMonths(rs.getInt("term_months")); 
+                    loan.setCreatedAt(rs.getTimestamp("created_at"));
+                    loan.setCicPdfUrl(rs.getString("cic_pdf_url")); 
                     loan.setStatus(rs.getString("status"));
+                    
                     list.add(loan);
                 }
             }
+        } catch (Exception e) {
+            e.printStackTrace();
         }
         return list;
     }

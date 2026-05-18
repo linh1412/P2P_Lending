@@ -23,7 +23,24 @@ public class UserDAO {
         return false;
     }
 
-    // 2. Hàm xử lý Đăng ký tài khoản (Transaction)
+    // 1b. Hàm kiểm tra sự tồn tại của Email để phục vụ báo lỗi login chi tiết
+    public boolean checkEmailExist(String email) {
+        String sql = "SELECT COUNT(*) FROM users WHERE email = ?";
+        try (Connection conn = DBConnection.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setString(1, email);
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) {
+                    return rs.getInt(1) > 0;
+                }
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return false;
+    }
+
+    // 2. Hàm xử lý Đăng ký tài khoản (Transaction) - GIỮ NGUYÊN HOÀN TOÀN CỦA BẠN
     public boolean registerUser(String email, String password, String role, 
                                 String firstName, String lastName, 
                                 String idCardNumber, double monthlyIncome, 
@@ -35,9 +52,8 @@ public class UserDAO {
 
         try {
             conn = DBConnection.getConnection();
-            conn.setAutoCommit(false); // Bắt đầu Transaction
+            conn.setAutoCommit(false); 
 
-            // Chèn vào bảng users
             String sqlUser = "INSERT INTO users (email, password, role) VALUES (?, ?, ?)";
             psUser = conn.prepareStatement(sqlUser, Statement.RETURN_GENERATED_KEYS);
             psUser.setString(1, email);
@@ -45,7 +61,6 @@ public class UserDAO {
             psUser.setString(3, role);
             psUser.executeUpdate();
 
-            // Lấy ID vừa tự động sinh ra
             rsKeys = psUser.getGeneratedKeys();
             long generatedUserId = 0;
             if (rsKeys.next()) {
@@ -54,7 +69,6 @@ public class UserDAO {
                 throw new Exception("Lỗi không lấy được ID người dùng mới.");
             }
 
-            // Chèn vào bảng con tương ứng
             if ("borrower".equals(role)) {
                 String sqlBorrower = "INSERT INTO borrowers (borrower_id, first_name, last_name, id_card_number, monthly_income, verification_status) VALUES (?, ?, ?, ?, ?, 'pending')";
                 psProfile = conn.prepareStatement(sqlBorrower);
@@ -74,7 +88,7 @@ public class UserDAO {
                 psProfile.executeUpdate();
             }
 
-            conn.commit(); // Xác nhận Transaction thành công
+            conn.commit(); 
             return true;
         } catch (Exception e) {
             if (conn != null) {
@@ -127,14 +141,14 @@ public class UserDAO {
         return false;
     }
 
-    // 5. Kiểm tra xem Borrower đã thực sự hoàn thành tải giấy tờ eKYC lên chưa
+    // 5. KHÔI PHỤC LOGIC GỐC: Kết hợp check số lượng ảnh và trạng thái bị Rejected
     public boolean checkBorrowerEKYC(long userId) {
-        String sqlCheckDocs = "SELECT COUNT(DISTINCT document_type) FROM documents WHERE user_id = ? AND document_type IN ('id_card_front', 'id_card_back')";
         String sqlCheckStatus = "SELECT verification_status FROM borrowers WHERE borrower_id = ?";
+        String sqlCheckDocs = "SELECT COUNT(DISTINCT document_type) FROM documents WHERE user_id = ? AND document_type IN ('id_card_front', 'id_card_back')";
         
         try (Connection conn = DBConnection.getConnection()) {
             
-            // BƯỚC A: Kiểm tra xem trạng thái tài khoản có bị Admin Từ Chối (rejected) hay không
+            // BƯỚC A: Check trạng thái Rejected trước. Nếu Admin đã reject -> Bắt buộc trả về false để đá sang ekyc.jsp
             try (PreparedStatement psStatus = conn.prepareStatement(sqlCheckStatus)) {
                 psStatus.setLong(1, userId);
                 try (ResultSet rsStatus = psStatus.executeQuery()) {
@@ -147,12 +161,13 @@ public class UserDAO {
                 }
             }
             
-            // BƯỚC B: Kiểm tra xem đã upload đủ 2 mặt CMND/CCCD chưa
+            // BƯỚC B: Nếu không bị reject, check xem tài khoản mới tinh này đã upload ảnh chưa
             try (PreparedStatement psDocs = conn.prepareStatement(sqlCheckDocs)) {
                 psDocs.setLong(1, userId);
                 try (ResultSet rsDocs = psDocs.executeQuery()) {
                     if (rsDocs.next()) {
                         int docCount = rsDocs.getInt(1);
+                        // Đếm số lượng loại tài liệu eKYC, nếu đủ từ 2 ảnh trở lên mới cho qua Dashboard
                         return docCount >= 2; 
                     }
                 }
@@ -164,17 +179,15 @@ public class UserDAO {
         return false;
     }
 
-    // 6. Hàm MỚI: Kiểm tra xem Investor đã thực sự tải giấy tờ eKYC lên chưa
+    // 6. Hàm kiểm tra eKYC của Investor
     public boolean checkInvestorEKYC(long userId) {
         String sqlCheckDocs = "SELECT COUNT(DISTINCT document_type) FROM documents WHERE user_id = ? AND document_type IN ('id_card_front', 'id_card_back')";
         try (Connection conn = DBConnection.getConnection();
              PreparedStatement psDocs = conn.prepareStatement(sqlCheckDocs)) {
-            
             psDocs.setLong(1, userId);
             try (ResultSet rsDocs = psDocs.executeQuery()) {
                 if (rsDocs.next()) {
-                    int docCount = rsDocs.getInt(1);
-                    return docCount >= 2; // Đã tải lên ít nhất cả mặt trước và mặt sau
+                    return rsDocs.getInt(1) >= 2;
                 }
             }
         } catch (Exception e) {
@@ -183,12 +196,11 @@ public class UserDAO {
         return false;
     }
 
-    // 7. Hàm tích hợp tổng hợp: Phục vụ trực tiếp luồng check eKYC của LoginController
+    // 7. Hàm tích hợp phục vụ LoginController
     public boolean checkUserEKYC(long userId) {
         String sqlFetchRole = "SELECT role FROM users WHERE user_id = ?";
         try (Connection conn = DBConnection.getConnection();
              PreparedStatement ps = conn.prepareStatement(sqlFetchRole)) {
-            
             ps.setLong(1, userId);
             try (ResultSet rs = ps.executeQuery()) {
                 if (rs.next()) {

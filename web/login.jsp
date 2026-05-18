@@ -5,9 +5,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Đăng nhập hệ thống P2P Lending</title>
-    
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    
     <style>
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
@@ -34,10 +32,8 @@
             padding: 12px;
             border: 1px solid #ddd;
             border-radius: 6px;
-            box-sizing: border-box; /* Quan trọng để input không bị tràn */
+            box-sizing: border-box;
         }
-        
-        /* CSS cho phần mật khẩu có icon */
         .password-wrapper {
             position: relative;
             display: flex;
@@ -51,7 +47,6 @@
             font-size: 18px;
         }
         .toggle-password:hover { color: #333; }
-
         .btn-login {
             width: 100%;
             padding: 12px;
@@ -65,7 +60,6 @@
             transition: background 0.3s;
         }
         .btn-login:hover { background-color: #0056b3; }
-        
         .error-msg {
             background-color: #f8d7da;
             color: #721c24;
@@ -74,6 +68,7 @@
             text-align: center;
             margin-bottom: 20px;
             font-size: 14px;
+            border: 1px solid #f5c6cb;
         }
         .footer-link { text-align: center; margin-top: 20px; font-size: 14px; }
         .footer-link a { color: #007bff; text-decoration: none; }
@@ -84,17 +79,19 @@
 <div class="login-box">
     <h2>Đăng Nhập P2P</h2>
 
-    <% if (request.getParameter("error") != null) { %>
+    <%-- Hiển thị thông báo lỗi linh hoạt gửi từ Controller --%>
+    <% if (request.getAttribute("errorMessage") != null) { %>
         <div class="error-msg">
             <i class="fa-solid fa-circle-exclamation"></i> 
-            Email hoặc mật khẩu không chính xác!
+            <%= request.getAttribute("errorMessage") %>
         </div>
     <% } %>
 
     <form action="LoginController" method="POST">
         <div class="form-group">
             <label>Email</label>
-            <input type="email" name="email" placeholder="Nhập email của bạn..." required>
+            <input type="email" name="email" placeholder="Nhập email của bạn..." 
+                   value="<%= (request.getAttribute("oldEmail") != null) ? request.getAttribute("oldEmail") : "" %>" required>
         </div>
 
         <div class="form-group">
@@ -117,15 +114,12 @@
     function togglePassword() {
         const passwordInput = document.getElementById("loginPassword");
         const eyeIcon = document.getElementById("eyeIcon");
-
         if (passwordInput.type === "password") {
             passwordInput.type = "text";
-            // Đổi icon sang mắt gạch chéo
             eyeIcon.classList.remove("fa-eye");
             eyeIcon.classList.add("fa-eye-slash");
         } else {
             passwordInput.type = "password";
-            // Đổi icon về mắt bình thường
             eyeIcon.classList.remove("fa-eye-slash");
             eyeIcon.classList.add("fa-eye");
         }

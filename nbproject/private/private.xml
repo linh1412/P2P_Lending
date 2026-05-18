@@ -6,14 +6,12 @@
             <file>file:/D:/Lập%20trình%20web%20BTL/P2P_Lending/src/java/model/LoanApplication.java</file>
             <file>file:/D:/Lập%20trình%20web%20BTL/P2P_Lending/src/java/dao/LoanDAO.java</file>
             <file>file:/D:/Lập%20trình%20web%20BTL/P2P_Lending/src/java/util/DBConnection.java</file>
-            <file>file:/D:/Lập%20trình%20web%20BTL/P2P_Lending/src/java/controller/LoanController.java</file>
             <file>file:/D:/Lập%20trình%20web%20BTL/P2P_Lending/web/WEB-INF/web.xml</file>
             <file>file:/D:/Lập%20trình%20web%20BTL/P2P_Lending/web/META-INF/context.xml</file>
             <file>file:/D:/Lập%20trình%20web%20BTL/P2P_Lending/src/java/controller/BorrowerDashboardServlet.java</file>
-            <file>file:/D:/Lập%20trình%20web%20BTL/P2P_Lending/web/create_loan.jsp</file>
+            <file>file:/D:/Lập%20trình%20web%20BTL/P2P_Lending/src/java/dao/BorrowerDAO.java</file>
             <file>file:/D:/Lập%20trình%20web%20BTL/P2P_Lending/web/borrower_dashboard.jsp</file>
             <file>file:/D:/Lập%20trình%20web%20BTL/P2P_Lending/src/java/model/Borrower.java</file>
-            <file>file:/D:/Lập%20trình%20web%20BTL/P2P_Lending/src/java/dao/BorrowerDAO.java</file>
             <file>file:/D:/Lập%20trình%20web%20BTL/P2P_Lending/src/java/dao/UserDAO.java</file>
             <file>file:/D:/Lập%20trình%20web%20BTL/P2P_Lending/src/java/controller/LoginController.java</file>
             <file>file:/D:/Lập%20trình%20web%20BTL/P2P_Lending/src/java/controller/RegisterController.java</file>
@@ -24,7 +22,7 @@
             <file>file:/D:/Lập%20trình%20web%20BTL/P2P_Lending/web/ekyc.jsp</file>
             <file>file:/D:/Lập%20trình%20web%20BTL/P2P_Lending/src/java/controller/EKycController.java</file>
             <file>file:/D:/Lập%20trình%20web%20BTL/P2P_Lending/src/java/controller/LogoutController.java</file>
-            <file>file:/D:/Lập%20trình%20web%20BTL/P2P_Lending/src/java/controller/CreateLoanApplicationController.java</file>
+            <file>file:/D:/Lập%20trình%20web%20BTL/P2P_Lending/src/java/controller/CreateLoanServlet.java</file>
         </group>
     </open-files>
 </project-private>

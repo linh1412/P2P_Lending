@@ -23,6 +23,10 @@
         .sidebar-menu { list-style: none; padding: 0; margin: 20px 0; flex-grow: 1; }
         .sidebar-menu li a { display: flex; align-items: center; padding: 14px 20px; color: #94a3b8; text-decoration: none; font-size: 15px; transition: all 0.2s; }
         .sidebar-menu li a:hover, .sidebar-menu li.active a { color: #ffffff; background-color: var(--sidebar-active); font-weight: 500; }
+        
+        .sidebar-menu li.disabled-menu a { color: #475569; cursor: not-allowed; background: none !important; }
+        .sidebar-menu li.disabled-menu a:hover { color: #475569; background: none; }
+
         .btn-logout { background-color: #ef4444; color: white; padding: 14px 20px; text-decoration: none; display: flex; align-items: center; font-weight: bold; font-size: 15px; border: none; width: 100%; box-sizing: border-box; cursor: pointer; transition: background 0.2s;}
         .btn-logout:hover { background-color: #dc2626; }
         
@@ -30,12 +34,22 @@
         .topbar { background: #ffffff; padding: 15px 30px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #e2e8f0; }
         .topbar-title { font-size: 18px; font-weight: bold; color: #1e293b; }
         .user-info { display: flex; align-items: center; gap: 15px; }
+        
         .badge { padding: 6px 14px; border-radius: 20px; font-size: 12px; font-weight: bold; text-transform: uppercase; }
         .badge-success { background-color: #dcfce7; color: #15803d; }
         .badge-warning { background-color: #fef9c3; color: #a16207; }
-        .badge-danger { background-color: #fef2f2; color: #991b1b; }
+        .badge-danger { background-color: #fef2f2; color: #991b1b; display: inline-block; text-decoration: none; }
         
         .container { padding: 30px; }
+        
+        .alert-banner { padding: 15px 20px; border-radius: 8px; margin-bottom: 25px; font-size: 14px; line-height: 1.5; border-left: 5px solid; }
+        .alert-banner-danger { background-color: #fef2f2; border-color: #ef4444; color: #991b1b; }
+        .alert-banner-warning { background-color: #fffbeb; border-color: #f59e0b; color: #92400e; }
+        .alert-banner-success { background-color: #dcfce7; border-color: #22c55e; color: #15803d; }
+
+        .btn-action-ekyc { display: inline-block; background-color: #f59e0b; color: #0f172a; padding: 8px 16px; font-weight: bold; text-decoration: none; border-radius: 6px; margin-top: 10px; font-size: 13px; transition: background 0.2s; }
+        .btn-action-ekyc:hover { background-color: #d97706; }
+
         .stats-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; margin-bottom: 30px; }
         .stat-card { background: #ffffff; padding: 24px; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.05); border: 1px solid #e2e8f0; }
         .stat-info h5 { margin: 0 0 8px 0; color: #64748b; font-size: 13px; }
@@ -68,10 +82,26 @@
             <ul class="sidebar-menu">
                 <li class="${currentAction == 'dashboard' ? 'active' : ''}">
                     <a href="${pageContext.request.contextPath}/BorrowerDashboardServlet?action=dashboard">📊 Tổng Quan Main</a>
-                </li>
-                <li class="${currentAction == 'create_loan' ? 'active' : ''}">
-                    <a href="${pageContext.request.contextPath}/BorrowerDashboardServlet?action=create_loan">📝 Đăng Ký Vay Mới</a>
-                </li>
+                </td>
+                
+                <c:choose>
+                    <c:when test="${trangThaiEkyc == 'rejected'}">
+                        <li class="disabled-menu" onclick="alert('Không thể đăng ký: Hồ sơ eKYC của bạn đã bị từ chối! Vui lòng thực hiện cập nhật lại hồ sơ.')">
+                            <a href="javascript:void(0);">🔒 Đăng Ký Vay Mới</a>
+                        </li>
+                    </c:when>
+                    <c:when test="${hasActiveLoan}">
+                        <li class="disabled-menu" onclick="alert('Không thể đăng ký: Bạn đang có một đơn vay chưa tất toán hoặc đang chờ duyệt!')">
+                            <a href="javascript:void(0);">🔒 Đăng Ký Vay Mới</a>
+                        </li>
+                    </c:when>
+                    <c:otherwise>
+                        <li class="${currentAction == 'create_loan' ? 'active' : ''}">
+                            <a href="${pageContext.request.contextPath}/BorrowerDashboardServlet?action=create_loan">📝 Đăng Ký Vay Mới</a>
+                        </li>
+                    </c:otherwise>
+                </c:choose>
+
                 <li class="${currentAction == 'market_loans' ? 'active' : ''}">
                     <a href="${pageContext.request.contextPath}/BorrowerDashboardServlet?action=market_loans">🌐 Khoản Vay Trên Sàn</a>
                 </li>
@@ -88,6 +118,7 @@
                 <c:choose>
                     <c:when test="${currentAction == 'create_loan'}">Đăng Ký Khoản Vay Mới</c:when>
                     <c:when test="${currentAction == 'market_loans'}">Khoản Vay Đang Gọi Vốn Toàn Sàn</c:when>
+                    <c:when test="${currentAction == 're_ekyc'}">Cập Nhật Thông Tin Định Danh eKYC</c:when>
                     <c:otherwise>Bảng Điều Khiển Tổng Quan</c:otherwise>
                 </c:choose>
             </div>
@@ -99,7 +130,7 @@
                         <span class="badge badge-success">ĐÃ XÁC THỰC EKYC</span>
                     </c:when>
                     <c:when test="${trangThaiEkyc == 'rejected'}">
-                        <span class="badge badge-danger">EKYC BỊ TỪ CHỐI</span>
+                        <span class="badge badge-danger" title="Hồ sơ định danh bị lỗi" style="cursor:help;">⚠️ EKYC BỊ TỪ CHỐI</span>
                     </c:when>
                     <c:otherwise>
                         <span class="badge badge-warning">CHỜ DUYỆT EKYC</span>
@@ -109,6 +140,28 @@
         </div>
 
         <div class="container">
+            
+            <%-- THÔNG BÁO TRẠNG THÁI CẬP NHẬT EKYC THÀNH CÔNG --%>
+            <c:if test="${param.msg == 'ekyc_updated_success'}">
+                <div class="alert-banner alert-banner-success">
+                    <strong>🎉 Thành công:</strong> Hồ sơ eKYC của bạn đã được gửi lại thành công. Trạng thái tài khoản hiện tại chuyển về <b>Chờ duyệt (Pending)</b>. Vui lòng đợi hệ thống kiểm tra.
+                </div>
+            </c:if>
+
+            <c:if test="${param.msg == 'error_ekyc_rejected' || (trangThaiEkyc == 'rejected' && currentAction != 're_ekyc')}">
+                <div class="alert-banner alert-banner-danger">
+                    <strong>⚠️ Quyền truy cập bị hạn chế:</strong> Hồ sơ định danh cá nhân (eKYC) của bạn hiện đang ở trạng thái <b>Từ chối (Rejected)</b>. Hệ thống đã khóa chức năng đăng ký khoản vay. 
+                    <br>
+                    <a href="${pageContext.request.contextPath}/BorrowerDashboardServlet?action=re_ekyc" class="btn-action-ekyc">🔄 Cập nhật lại thông tin eKYC ngay</a>
+                </div>
+            </c:if>
+            
+            <c:if test="${param.msg == 'error_already_has_loan' || (hasActiveLoan && currentAction == 'dashboard')}">
+                <div class="alert-banner alert-banner-warning">
+                    <strong>ℹ️ Thông báo hạn mức:</strong> Bạn đang có một yêu cầu vay đang trong trạng thái xử lý hồ sơ (Chờ duyệt) hoặc một khoản nợ chưa tất toán hoàn toàn trên hệ thống. Để đảm bảo an toàn tài chính, bạn chỉ được phép tạo đơn mới sau khi hoàn tất nghĩa vụ của đơn vay cũ.
+                </div>
+            </c:if>
+
             <c:choose>
                 <%-- TAB 1: TỔNG QUAN MAIN --%>
                 <c:when test="${currentAction == 'dashboard'}">
@@ -151,13 +204,13 @@
                                     <c:when test="${not empty myLoansList}">
                                         <c:forEach var="myLoan" items="${myLoansList}">
                                             <tr>
-                                                <td><strong>#<c:out value="${myLoan.loanId}"/></strong></td>
-                                                <td><strong><fmt:formatNumber value="${myLoan.loanAmount}" type="number" groupingUsed="true"/> đ</strong></td>
-                                                <td><c:out value="${myLoan.tenureMonths}"/> Tháng</td>
+                                                <td>#<strong><c:out value="${myLoan.applicationId}"/></strong></td>
+                                                <td><strong><fmt:formatNumber value="${myLoan.amountRequested}" type="number" groupingUsed="true"/> đ</strong></td>
+                                                <td><c:out value="${myLoan.termMonths}"/> Tháng</td>
                                                 <td><fmt:formatDate value="${myLoan.createdAt}" pattern="dd/MM/yyyy HH:mm"/></td>
                                                 <td>
-                                                    <c:if test="${not empty myLoan.pdfUrl}">
-                                                        <a href="<c:out value='${myLoan.pdfUrl}'/>" target="_blank" style="color:var(--primary-color); text-decoration:none; font-weight: 500;">📄 Xem PDF</a>
+                                                    <c:if test="${not empty myLoan.cicPdfUrl}">
+                                                        <a href="<c:out value='${myLoan.cicPdfUrl}'/>" target="_blank" style="color:var(--primary-color); text-decoration:none; font-weight: 500;">📄 Xem PDF</a>
                                                     </c:if>
                                                 </td>
                                                 <td>
@@ -180,18 +233,45 @@
                     </div>
                 </c:when>
 
+                <%-- TAB ĐẶC BIỆT: CẬP NHẬT LẠI EKYC KHI BỊ REJECTED --%>
+                <c:when test="${currentAction == 're_ekyc'}">
+                    <div class="data-card" style="max-width: 600px; margin: 0 auto;">
+                        <h4>🔄 Làm mới hồ sơ định danh cá nhân (eKYC)</h4>
+                        <p style="font-size: 13px; color: #64748b; margin-bottom: 20px;">Vui lòng điều chỉnh lại thông tin chính xác theo giấy tờ tùy thân của bạn để gửi Ban quản trị xét duyệt lại.</p>
+                        
+                        <form action="${pageContext.request.contextPath}/BorrowerDashboardServlet" method="POST">
+                            <input type="hidden" name="action" value="update_ekyc">
+                            
+                            <div class="form-group">
+                                <label>Họ (và tên đệm)</label>
+                                <input type="text" name="firstName" class="form-control" value="<c:out value="${borrowerObj.firstName}"/>" required>
+                            </div>
+                            <div class="form-group">
+                                <label>Tên chính xác</label>
+                                <input type="text" name="lastName" class="form-control" value="<c:out value="${borrowerObj.lastName}"/>" required>
+                            </div>
+                            <div class="form-group">
+                                <label>Thu nhập hằng tháng kê khai thực tế (VNĐ)</label>
+                                <input type="number" name="monthlyIncome" class="form-control" value="<fmt:formatNumber value="${borrowerObj.monthlyIncome}" pattern="#"/>" required>
+                                <span class="form-hint">Hạn mức vay mới sẽ tự động cập nhật bằng: Thu nhập $\times$ 3.0 lần sau khi được duyệt.</span>
+                            </div>
+                            
+                            <button type="submit" class="btn-submit" style="background-color: #f59e0b; color: #0f172a;">Gửi lại hồ sơ kiểm duyệt</button>
+                        </form>
+                    </div>
+                </c:when>
+
                 <%-- TAB 2: ĐĂNG KÝ VAY --%>
                 <c:when test="${currentAction == 'create_loan'}">
                     <c:choose>
-                        <c:when test="${trangThaiEkyc == 'verified'}">
+                        <c:when test="${trangThaiEkyc == 'verified' && !hasActiveLoan}">
                             <div class="data-card" style="max-width: 600px; margin: 0 auto;">
                                 <h4>📝 Tạo Đơn Đăng Ký Vay Mới</h4>
-                                <form action="${pageContext.request.contextPath}/BorrowerDashboardServlet" method="POST" id="loanForm" onsubmit="return validateForm()">
-                                    <input type="hidden" name="action" value="submit_loan">
+                                <form action="${pageContext.request.contextPath}/CreateLoanServlet" method="POST" id="loanForm" onsubmit="return validateForm()">
                                     
                                     <div class="form-group">
                                         <label for="soTienVay">Số tiền yêu cầu gọi vốn (VNĐ)</label>
-                                        <input type="number" id="soTienVay" name="soTienVay" min="1000000" max="${hanMucToiDa}" class="form-control" required oninput="previewCurrency(this.value)">
+                                        <input type="number" id="soTienVay" name="amountRequested" min="1000000" max="${hanMucToiDa}" class="form-control" required oninput="previewCurrency(this.value)">
                                         <div id="currencyPreview" class="currency-preview"></div>
                                         <span class="form-hint">
                                             Hạn mức tối đa được phép vay: <strong style="color: var(--primary-color);"><fmt:formatNumber value="${hanMucToiDa}" type="number"/> đ</strong>
@@ -199,15 +279,15 @@
                                     </div>
                                     <div class="form-group">
                                         <label for="kyHan">Kỳ hạn (Tháng)</label>
-                                        <input type="number" id="kyHan" name="kyHan" min="1" max="60" class="form-control" required>
+                                        <input type="number" id="kyHan" name="termMonths" min="1" max="60" class="form-control" required>
                                     </div>
                                     <div class="form-group">
                                         <label for="ngayCapCic">Ngày cấp CIC cá nhân</label>
-                                        <input type="date" id="ngayCapCic" name="ngayCapCic" class="form-control" required>
+                                        <input type="date" id="ngayCapCic" name="cicIssuedDate" class="form-control" required>
                                     </div>
                                     <div class="form-group">
                                         <label for="urlFileCic">Đường dẫn file PDF CIC</label>
-                                        <input type="url" id="urlFileCic" name="urlFileCic" placeholder="https://example.com/your-cic.pdf" class="form-control" required>
+                                        <input type="url" id="urlFileCic" name="cicPdfUrl" placeholder="https://example.com/your-cic.pdf" class="form-control" required>
                                     </div>
                                     <button type="submit" class="btn-submit">Xác Nhận Gửi Đơn Vay</button>
                                 </form>
@@ -216,9 +296,13 @@
                         <c:otherwise>
                             <div class="alert-lock">
                                 <span style="font-size: 40px;">🔒</span>
-                                <h3>Chức năng đăng ký vay đang bị khóa</h3>
-                                <p>Tài khoản của bạn hiện chưa được xác thực eKYC thành công hoặc đang ở trạng thái chờ duyệt.</p>
-                                <p style="font-size: 14px; color: #64748b; margin-top: 15px;">Vui lòng quay lại sau khi hồ sơ định danh được phê duyệt thành công thành `verified`.</p>
+                                <h3>Chức năng đăng ký vay đã bị khóa</h3>
+                                <p>Tài khoản của bạn hiện thuộc một trong các trường hợp:</p>
+                                <ul style="text-align: left; max-width: 380px; margin: 10px auto; color: #475569; font-size: 14px;">
+                                    <li>Chưa xác thực eKYC hoặc eKYC bị từ chối.</li>
+                                    <li>Đang có một khoản vay khác đang hoạt động dở dang.</li>
+                                </ul>
+                                <p style="font-size: 14px; color: #64748b; margin-top: 15px;">Vui lòng quay lại màn hình Tổng Quan để kiểm tra chi tiết lỗi.</p>
                             </div>
                         </c:otherwise>
                     </c:choose>
@@ -235,7 +319,7 @@
                                     <th>MÃ NGƯỜI VAY</th>
                                     <th>MỨC ĐỘ RỦI RO</th>
                                     <th>SỐ TIỀN VAY</th>
-                                    <th>KỲ HẠN</th>
+                                    <th>KÝ HẠN</th>
                                     <th>NỘI DUNG</th>
                                     <th>TIẾN ĐỘ GỌI VỐN</th>
                                 </tr>

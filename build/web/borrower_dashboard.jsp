@@ -80,9 +80,9 @@
         <div>
             <div class="sidebar-brand">🏛️ <span>P2P LENDING</span></div>
             <ul class="sidebar-menu">
-                <li class="${currentAction == 'dashboard' ? 'active' : ''}">
+                <li class="${empty currentAction || currentAction == 'dashboard' ? 'active' : ''}">
                     <a href="${pageContext.request.contextPath}/BorrowerDashboardServlet?action=dashboard">📊 Tổng Quan Main</a>
-                </td>
+                </li>
                 
                 <c:choose>
                     <c:when test="${trangThaiEkyc == 'rejected'}">
@@ -141,6 +141,13 @@
 
         <div class="container">
             
+            <%-- THÔNG BÁO THÀNH CÔNG KHI SUBMIT ĐƠN VAY MỚI --%>
+            <c:if test="${param.msg == 'loan_submit_success'}">
+                <div class="alert-banner alert-banner-success">
+                    <strong>🎉 Đăng ký thành công:</strong> Đơn đăng ký khoản vay của bạn đã được tiếp nhận và chuyển sang trạng thái <b>Chờ duyệt</b>. Ban quản trị sẽ sớm thẩm định tệp hồ sơ CIC PDF đính kèm.
+                </div>
+            </c:if>
+
             <%-- THÔNG BÁO TRẠNG THÁI CẬP NHẬT EKYC THÀNH CÔNG --%>
             <c:if test="${param.msg == 'ekyc_updated_success'}">
                 <div class="alert-banner alert-banner-success">
@@ -156,7 +163,7 @@
                 </div>
             </c:if>
             
-            <c:if test="${param.msg == 'error_already_has_loan' || (hasActiveLoan && currentAction == 'dashboard')}">
+            <c:if test="${param.msg == 'error_already_has_loan' || (hasActiveLoan && (empty currentAction || currentAction == 'dashboard'))}">
                 <div class="alert-banner alert-banner-warning">
                     <strong>ℹ️ Thông báo hạn mức:</strong> Bạn đang có một yêu cầu vay đang trong trạng thái xử lý hồ sơ (Chờ duyệt) hoặc một khoản nợ chưa tất toán hoàn toàn trên hệ thống. Để đảm bảo an toàn tài chính, bạn chỉ được phép tạo đơn mới sau khi hoàn tất nghĩa vụ của đơn vay cũ.
                 </div>
@@ -164,7 +171,7 @@
 
             <c:choose>
                 <%-- TAB 1: TỔNG QUAN MAIN --%>
-                <c:when test="${currentAction == 'dashboard'}">
+                <c:when test="${empty currentAction || currentAction == 'dashboard'}">
                     <div class="stats-grid">
                         <div class="stat-card">
                             <div class="stat-info">
@@ -195,7 +202,7 @@
                                     <th>SỐ TIỀN ĐĂNG KÝ</th>
                                     <th>KỲ HẠN VAY</th>
                                     <th>NGÀY TẠO ĐƠN</th>
-                                    <th>XEM CIC</th>
+                                    <th style="text-align: center;">XEM CIC</th>
                                     <th>TRẠNG THÁI HỒ SƠ</th>
                                 </tr>
                             </thead>
@@ -208,10 +215,18 @@
                                                 <td><strong><fmt:formatNumber value="${myLoan.amountRequested}" type="number" groupingUsed="true"/> đ</strong></td>
                                                 <td><c:out value="${myLoan.termMonths}"/> Tháng</td>
                                                 <td><fmt:formatDate value="${myLoan.createdAt}" pattern="dd/MM/yyyy HH:mm"/></td>
-                                                <td>
-                                                    <c:if test="${not empty myLoan.cicPdfUrl}">
-                                                        <a href="<c:out value='${myLoan.cicPdfUrl}'/>" target="_blank" style="color:var(--primary-color); text-decoration:none; font-weight: 500;">📄 Xem PDF</a>
-                                                    </c:if>
+                                                <td style="text-align: center;">
+                                                    <%-- ĐOẠN ĐÃ ĐƯỢC FIX LỖI: Không sử dụng c:out bọc ngoài thẻ href để tránh escape ký tự URL --%>
+                                                    <c:choose>
+                                                        <c:when test="${not empty myLoan.cicPdfUrl}">
+                                                            <a href="${myLoan.cicPdfUrl}" target="_blank" style="color:#2563eb; text-decoration:underline; font-weight: bold;">
+                                                                📄 Xem PDF
+                                                            </a>
+                                                        </c:when>
+                                                        <c:otherwise>
+                                                            <span style="color: #94a3b8; font-style: italic; font-size: 13px;">Chưa có file</span>
+                                                        </c:otherwise>
+                                                    </c:choose>
                                                 </td>
                                                 <td>
                                                     <c:choose>
@@ -252,8 +267,8 @@
                             </div>
                             <div class="form-group">
                                 <label>Thu nhập hằng tháng kê khai thực tế (VNĐ)</label>
-                                <input type="number" name="monthlyIncome" class="form-control" value="<fmt:formatNumber value="${borrowerObj.monthlyIncome}" pattern="#"/>" required>
-                                <span class="form-hint">Hạn mức vay mới sẽ tự động cập nhật bằng: Thu nhập $\times$ 3.0 lần sau khi được duyệt.</span>
+                                <input type="number" name="monthlyIncome" class="form-control" value="${not empty borrowerObj.monthlyIncome ? borrowerObj.monthlyIncome : ''}" required>
+                                <span class="form-hint">Hạn mức vay mới sẽ tự động cập nhật bằng: Thu nhập x 3.0 lần sau khi được duyệt.</span>
                             </div>
                             
                             <button type="submit" class="btn-submit" style="background-color: #f59e0b; color: #0f172a;">Gửi lại hồ sơ kiểm duyệt</button>
@@ -267,11 +282,13 @@
                         <c:when test="${trangThaiEkyc == 'verified' && !hasActiveLoan}">
                             <div class="data-card" style="max-width: 600px; margin: 0 auto;">
                                 <h4>📝 Tạo Đơn Đăng Ký Vay Mới</h4>
-                                <form action="${pageContext.request.contextPath}/CreateLoanServlet" method="POST" id="loanForm" onsubmit="return validateForm()">
+                                
+                                <form action="${pageContext.request.contextPath}/BorrowerDashboardServlet" method="POST" id="loanForm" onsubmit="return validateForm()">
+                                    <input type="hidden" name="action" value="submit_loan">
                                     
                                     <div class="form-group">
                                         <label for="soTienVay">Số tiền yêu cầu gọi vốn (VNĐ)</label>
-                                        <input type="number" id="soTienVay" name="amountRequested" min="1000000" max="${hanMucToiDa}" class="form-control" required oninput="previewCurrency(this.value)">
+                                        <input type="number" id="soTienVay" name="amountRequested" min="1000000" data-max="${not empty hanMucToiDa ? hanMucToiDa : 0}" class="form-control" required oninput="previewCurrency(this.value)">
                                         <div id="currencyPreview" class="currency-preview"></div>
                                         <span class="form-hint">
                                             Hạn mức tối đa được phép vay: <strong style="color: var(--primary-color);"><fmt:formatNumber value="${hanMucToiDa}" type="number"/> đ</strong>
@@ -329,17 +346,18 @@
                                     <c:when test="${not empty marketLoansList}">
                                         <c:forEach var="loan" items="${marketLoansList}">
                                             <tr>
-                                                <td><strong><c:out value="${loan[0]}"/></strong></td>
-                                                <td><span style="color:#64748b;"><c:out value="${loan[1]}"/></span></td>
-                                                <td><span style="padding:4px 8px; border-radius:4px; font-size:12px; background:#fef9c3; color:#a16207; font-weight:bold;"><c:out value="${loan[2]}"/></span></td>
-                                                <td><strong><fmt:formatNumber value="${loan[3]}" type="number" groupingUsed="true"/> đ</strong></td>
-                                                <td><c:out value="${loan[4]}"/> Tháng</td>
-                                                <td><i style="color:#94a3b8;"><c:out value="${loan[5]}"/></i></td>
+                                                <td><strong><c:out value="${loan.applicationId}"/></strong></td>
+                                                <td><span style="color:#64748b;">User_<c:out value="${loan.borrowerId}"/></span></td>
+                                                <td><span style="padding:4px 8px; border-radius:4px; font-size:12px; background:#fef9c3; color:#a16207; font-weight:bold;">Mức thấp</span></td>
+                                                <td><strong><fmt:formatNumber value="${loan.amountRequested}" type="number" groupingUsed="true"/> đ</strong></td>
+                                                <td><c:out value="${loan.termMonths}"/> Tháng</td>
+                                                <td><i style="color:#94a3b8;">Gọi vốn tiêu dùng dùng CIC cá nhân</i></td>
                                                 <td>
+                                                    <c:set var="percent" value="${not empty loan.amountRequested && loan.amountRequested gt 0 ? (loan.amountRaised * 100 / loan.amountRequested) : 0}"/>
                                                     <div style="width: 80px; background: #e2e8f0; border-radius: 10px; height: 6px; display: inline-block; margin-right: 5px;">
-                                                        <div style="width: ${loan[6]}%; background: #22c55e; height: 100%; border-radius: 10px;"></div>
+                                                        <div style="width: ${percent}%; background: #22c55e; height: 100%; border-radius: 10px;"></div>
                                                     </div>
-                                                    <span style="font-size:12px; font-weight:bold; color:#16a34a;"><c:out value="${loan[6]}"/>%</span>
+                                                    <span style="font-size:12px; font-weight:bold; color:#16a34a;"><fmt:formatNumber value="${percent}" maxFractionDigits="0"/>%</span>
                                                 </td>
                                             </tr>
                                         </c:forEach>
@@ -371,8 +389,9 @@
         }
 
         function validateForm() {
-            const soTienVay = parseFloat(document.getElementById('soTienVay').value);
-            const hanMucToiDa = parseFloat("${not empty hanMucToiDa ? hanMucToiDa : 0}");
+            const inputSotien = document.getElementById('soTienVay');
+            const soTienVay = parseFloat(inputSotien.value);
+            const hanMucToiDa = parseFloat(inputSotien.getAttribute('data-max')) || 0;
             const ngayCapCic = new Date(document.getElementById('ngayCapCic').value);
             const today = new Date();
 

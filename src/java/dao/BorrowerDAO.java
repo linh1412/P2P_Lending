@@ -11,7 +11,7 @@ import java.util.List;
 
 public class BorrowerDAO {
 
-    // 1. Lấy thông tin cơ bản của Borrower dựa trên ID người dùng đăng nhập (chính là borrower_id)
+    // 1. Lấy thông tin cơ bản của Borrower dựa trên ID người dùng đăng nhập
     public Borrower getBorrowerById(long borrowerId) {
         String sql = "SELECT borrower_id, first_name, last_name, verification_status, monthly_income " +
                      "FROM borrowers WHERE borrower_id = ?";
@@ -60,7 +60,6 @@ public class BorrowerDAO {
     // 3. OPTIMIZED: Lấy danh sách hồ sơ đơn vay của Borrower (Sắp xếp đơn mới nhất lên đầu)
     public List<LoanApplication> getLoansByBorrower(long borrowerId) {
         List<LoanApplication> list = new ArrayList<>();
-        // Bổ sung ORDER BY để đơn vay mới tạo hoặc vừa cập nhật hiển thị lên đầu Dashboard
         String sql = "SELECT application_id, amount_requested, term_months, created_at, cic_pdf_url, status " +
                      "FROM loan_applications WHERE borrower_id = ? ORDER BY created_at DESC";
         try (Connection conn = DBConnection.getConnection();
@@ -87,13 +86,29 @@ public class BorrowerDAO {
         return list;
     }
 
-    // =========================================================================
-    // HÀM BỔ SUNG THÊM (NẾU CẦN XỬ LÝ RIÊNG BIỆT CHO PHÂN HỆ BORROWER)
-    // =========================================================================
+    /**
+     * 🛠️ ĐÃ NÂNG CẤP TOÀN DIỆN: Cập nhật thông tin eKYC đầy đủ khi gửi lại hồ sơ bị lỗi
+     */
+    public boolean updateBorrowerEkyc(Borrower borrower) {
+        String sql = "UPDATE borrowers SET first_name = ?, last_name = ?, monthly_income = ?, verification_status = ? WHERE borrower_id = ?";
+        try (Connection conn = DBConnection.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            
+            ps.setString(1, borrower.getFirstName());
+            ps.setString(2, borrower.getLastName());
+            ps.setDouble(3, borrower.getMonthlyIncome());
+            ps.setString(4, borrower.getVerificationStatus());
+            ps.setLong(5, borrower.getBorrowerId());
+            
+            return ps.executeUpdate() > 0;
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return false;
+    }
 
     /**
-     * 4. BỔ SUNG: Cập nhật nhanh trạng thái eKYC của riêng bản ghi Borrower
-     * Hàm này có thể dùng bổ trợ song song với UserDAO để tối ưu hiệu năng điều hướng.
+     * Hàm cũ của bạn (giữ lại để tương thích ngược nếu có chỗ khác gọi)
      */
     public boolean updateEkycStatus(long borrowerId, String status) {
         String sql = "UPDATE borrowers SET verification_status = ? WHERE borrower_id = ?";

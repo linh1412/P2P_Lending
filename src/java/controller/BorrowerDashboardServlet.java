@@ -1,12 +1,14 @@
 package controller;
 
 import dao.BorrowerDAO;
+import dao.LoanDAO;
 import model.LoanApplication;
 import model.Borrower;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.annotation.WebServlet;
 import jakarta.servlet.http.*;
 import java.io.IOException;
+import java.sql.Date;
 import java.util.List;
 
 @WebServlet("/BorrowerDashboardServlet")
@@ -19,7 +21,6 @@ public class BorrowerDashboardServlet extends HttpServlet {
         HttpSession session = request.getSession();
         Long userId = (Long) session.getAttribute("userId");
 
-        // Kiểm tra phiên đăng nhập bảo mật
         if (userId == null) {
             response.sendRedirect("login.jsp");
             return;
@@ -30,28 +31,19 @@ public class BorrowerDashboardServlet extends HttpServlet {
             currentAction = "dashboard";
         }
 
-        // 🛠️ BỔ SUNG LUỒNG ĐIỀU HƯỚNG QUAY LẠI TRANG EKYC KHI BẤM CẬP NHẬT
-        if ("re_ekyc".equals(currentAction)) {
-            // Chuyển hướng trực tiếp sang trang ekyc.jsp ban đầu để upload lại ảnh dính lỗi
-            request.getRequestDispatcher("ekyc.jsp").forward(request, response);
-            return; // Ngắt luồng tại đây để tránh chạy các câu lệnh SQL không cần thiết phía dưới
-        }
-
         try {
             BorrowerDAO bDao = new BorrowerDAO();
-
-            // Vì user_id liên kết 1-1 với borrower_id, ta truyền trực tiếp userId từ session vào
+            LoanDAO lDao = new LoanDAO();
+            
             Borrower borrower = bDao.getBorrowerById(userId);
             
-            // CƠ CHẾ DỰ PHÒNG CHỐNG TRỐNG TRONG QUÁ TRÌNH KHỞI CHẠY KIỂM THỬ:
             if (borrower == null) {
-                borrower = bDao.getBorrowerById(1);
+                borrower = bDao.getBorrowerById(1L);
                 if (borrower != null) {
                     userId = borrower.getBorrowerId();
                 }
             }
 
-            // Khởi tạo các giá trị hiển thị mặc định
             String fullName = "Người dùng";
             double monthlyIncome = 0.0;
             double maxLimit = 0.0;
@@ -59,32 +51,22 @@ public class BorrowerDashboardServlet extends HttpServlet {
             if (borrower != null) {
                 fullName = borrower.getFirstName() + " " + borrower.getLastName();
                 monthlyIncome = borrower.getMonthlyIncome();
-                // Công thức tính toán hạn mức tự động: Gấp 3 lần thu nhập hàng tháng công bố
-                maxLimit = monthlyIncome * 3.0;
+                maxLimit = monthlyIncome * 3.0; 
             }
 
-            // [ĐỒNG BỘ LUỒNG MỚI]: Ưu tiên lấy trạng thái eKYC từ Session do Login/EKycController thiết lập
             String verificationStatus = (String) session.getAttribute("verification_status");
-            
-            // Nếu session chưa có (ví dụ trường hợp vào thẳng URL không qua login), mới lấy từ DB hoặc mặc định
             if (verificationStatus == null || "none".equals(verificationStatus)) {
                 if (borrower != null && borrower.getVerificationStatus() != null) {
                     verificationStatus = borrower.getVerificationStatus();
                 } else {
                     verificationStatus = "pending";
                 }
-                // Cập nhật ngược lại vào session để giữ tính thống nhất
                 session.setAttribute("verification_status", verificationStatus);
             }
 
-            // Tính toán tổng dư nợ thực tế từ database
-            double currentDebt = bDao.getCurrentDebt(userId);
+            // Gọi đồng bộ từ lDao
+            List<LoanApplication> loanList = lDao.getLoansByBorrower(userId);
 
-            // Tải danh sách đơn vay cá nhân thực tế
-            List<LoanApplication> loanList = bDao.getLoansByBorrower(userId);
-
-            // Kiểm tra xem người dùng có khoản vay nào đang hoạt động hoặc chờ duyệt không
-            // Điều này dùng để bật/tắt nút "Đăng ký vay mới" trên giao diện dashboard
             boolean hasActiveLoan = false;
             if (loanList != null) {
                 for (LoanApplication loan : loanList) {
@@ -95,28 +77,140 @@ public class BorrowerDashboardServlet extends HttpServlet {
                 }
             }
 
-            // Đẩy toàn bộ dữ liệu ra Request Scope để hiển thị lên trang JSP
+            if ("re_ekyc".equals(currentAction)) {
+                request.setAttribute("borrowerObj", borrower);
+            } 
+            else if ("market_loans".equals(currentAction)) {
+                List<LoanApplication> marketLoans = lDao.getAllMarketLoans(); 
+                request.setAttribute("marketLoansList", marketLoans);
+            }
+
+            double currentDebt = bDao.getCurrentDebt(userId);
+
             request.setAttribute("currentAction", currentAction);
             request.setAttribute("borrowerName", fullName);
-            request.setAttribute("trangThaiEkyc", verificationStatus); // Đồng bộ chuẩn tên biến với file JSP
+            request.setAttribute("trangThaiEkyc", verificationStatus);
             request.setAttribute("thuNhapKhai", monthlyIncome);
             request.setAttribute("hanMucToiDa", maxLimit);
             request.setAttribute("tongDuNo", currentDebt);
             request.setAttribute("myLoansList", loanList);
             request.setAttribute("hasActiveLoan", hasActiveLoan);
 
-            // Chuyển hướng đồng bộ thông tin sang trang hiển thị
             request.getRequestDispatcher("borrower_dashboard.jsp").forward(request, response);
 
         } catch (Exception e) {
             e.printStackTrace();
-            response.sendError(HttpServletResponse.SC_INTERNAL_SERVER_ERROR, "Lỗi khi tải thông tin Dashboard.");
+            response.sendError(HttpServletResponse.SC_INTERNAL_SERVER_ERROR, "Hệ thống gặp sự cố khi tải bảng điều khiển.");
         }
     }
 
     @Override
     protected void doPost(HttpServletRequest request, HttpServletResponse response) 
             throws ServletException, IOException {
-        doGet(request, response);
+        
+        HttpSession session = request.getSession();
+        Long userId = (Long) session.getAttribute("userId");
+
+        if (userId == null) {
+            response.sendRedirect("login.jsp");
+            return;
+        }
+
+        String action = request.getParameter("action");
+        BorrowerDAO bDao = new BorrowerDAO();
+        LoanDAO lDao = new LoanDAO();
+
+        try {
+            if ("submit_loan".equals(action)) {
+                String amountStr = request.getParameter("amountRequested");
+                String termStr = request.getParameter("termMonths");
+                String cicIssuedDateStr = request.getParameter("cicIssuedDate");
+                String cicPdfUrl = request.getParameter("cicPdfUrl");
+
+                double amountRequested = (amountStr != null && !amountStr.isEmpty()) ? Double.parseDouble(amountStr) : 0.0;
+                int termMonths = (termStr != null && !termStr.isEmpty()) ? Integer.parseInt(termStr) : 0;
+
+                List<LoanApplication> loanList = lDao.getLoansByBorrower(userId);
+                boolean hasActiveLoan = false;
+                if (loanList != null) {
+                    for (LoanApplication loan : loanList) {
+                        if ("pending".equals(loan.getStatus()) || "approved".equals(loan.getStatus()) || "funded".equals(loan.getStatus())) {
+                            hasActiveLoan = true;
+                            break;
+                        }
+                    }
+                }
+
+                if (hasActiveLoan) {
+                    response.sendRedirect(request.getContextPath() + "/BorrowerDashboardServlet?action=dashboard&msg=error_already_has_loan");
+                    return;
+                }
+
+                LoanApplication newLoan = new LoanApplication();
+                newLoan.setBorrowerId(userId);
+                newLoan.setAmountRequested(amountRequested);
+                newLoan.setTermMonths(termMonths);
+                newLoan.setCicPdfUrl(cicPdfUrl);
+                
+                if (cicIssuedDateStr != null && !cicIssuedDateStr.isEmpty()) {
+                    try {
+                        newLoan.setCicIssuedDate(Date.valueOf(cicIssuedDateStr));
+                    } catch (IllegalArgumentException e) {
+                        newLoan.setCicIssuedDate(new Date(System.currentTimeMillis()));
+                    }
+                } else {
+                    newLoan.setCicIssuedDate(new Date(System.currentTimeMillis()));
+                }
+                
+                newLoan.setStatus("pending");
+
+                // Gọi hàm nạp chồng đối tượng vừa viết ở trên
+                boolean success = lDao.insertLoanApplication(newLoan);
+                
+                if (success) {
+                    response.sendRedirect(request.getContextPath() + "/BorrowerDashboardServlet?action=dashboard&msg=loan_submit_success");
+                } else {
+                    response.sendRedirect(request.getContextPath() + "/BorrowerDashboardServlet?action=create_loan&msg=loan_submit_failed");
+                }
+                return;
+            } 
+            
+            else if ("update_ekyc".equals(action)) {
+                String firstName = request.getParameter("firstName");
+                String lastName = request.getParameter("lastName");
+                String incomeStr = request.getParameter("monthlyIncome");
+                double monthlyIncome = (incomeStr != null && !incomeStr.isEmpty()) ? Double.parseDouble(incomeStr) : 0.0;
+
+                Borrower updateBorrower = new Borrower();
+                updateBorrower.setBorrowerId(userId);
+                updateBorrower.setFirstName(firstName);
+                updateBorrower.setLastName(lastName);
+                updateBorrower.setMonthlyIncome(monthlyIncome);
+                updateBorrower.setVerificationStatus("pending");
+
+                // Gọi hàm nhận đối tượng vừa nâng cấp
+                boolean success = bDao.updateBorrowerEkyc(updateBorrower);
+
+                if (success) {
+                    session.setAttribute("verification_status", "pending");
+                    response.sendRedirect(request.getContextPath() + "/BorrowerDashboardServlet?action=dashboard&msg=ekyc_updated_success");
+                } else {
+                    response.sendRedirect(request.getContextPath() + "/BorrowerDashboardServlet?action=re_ekyc&msg=ekyc_updated_failed");
+                }
+                return;
+            }
+            
+            response.sendRedirect(request.getContextPath() + "/BorrowerDashboardServlet?action=dashboard");
+
+        } catch (Exception e) {
+            e.printStackTrace();
+            response.setContentType("text/html;charset=UTF-8");
+            response.getWriter().println("<div style='padding:20px; border:1px solid #ef4444; background:#fef2f2; color:#991b1b; font-family:sans-serif;'>");
+            response.getWriter().println("<h2>💥 Đã xảy ra lỗi hệ thống xử lý Backend (Servlet):</h2>");
+            response.getWriter().println("<pre style='background:#ffffff; padding:15px; border-radius:6px; border:1px solid #fca5a5; overflow-x:auto;'>");
+            e.printStackTrace(new java.io.PrintWriter(response.getWriter()));
+            response.getWriter().println("</pre>");
+            response.getWriter().println("</div>");
+        }
     }
 }

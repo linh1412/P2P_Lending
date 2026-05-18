@@ -33,19 +33,17 @@ public class LoginController extends HttpServlet {
 
         String trimmedEmail = email.trim();
 
-        // 2. BƯỚC MỚI: Kiểm tra tài khoản đã đăng ký hay chưa
-        // Giả định bạn có hàm checkEmailExist trả về boolean trong UserDAO
+        // 2. Kiểm tra tài khoản đã đăng ký hay chưa
         boolean isEmailExist = userDAO.checkEmailExist(trimmedEmail); 
         
         if (!isEmailExist) {
-            // Trường hợp 1: Email chưa đăng ký hệ thống
             request.setAttribute("errorMessage", "Tài khoản chưa được đăng ký trong hệ thống!");
             request.setAttribute("oldEmail", email); 
             request.getRequestDispatcher("login.jsp").forward(request, response);
-            return; // Dừng xử lý tại đây
+            return; 
         }
 
-        // 3. Thực hiện kiểm tra mật khẩu (Khi chắc chắn email đã tồn tại)
+        // 3. Thực hiện kiểm tra đăng nhập
         String[] result = userDAO.loginCheck(trimmedEmail, password);
 
         if (result != null) {
@@ -54,27 +52,34 @@ public class LoginController extends HttpServlet {
             String userEmail = result[1];
             String role = result[2]; // 'admin', 'borrower', hoặc 'investor'
 
-            // Lưu thông tin người dùng vào Session
+            // Lưu thông tin cơ bản vào Session
             session.setAttribute("userId", userId);
             session.setAttribute("email", userEmail);
             session.setAttribute("role", role);
 
-            // Kiểm tra trạng thái hồ sơ eKYC
-            boolean hasSubmittedEKYC = userDAO.checkUserEKYC(userId);
+            // [CẬP NHẬT LUỒNG MỚI]: Lấy chuỗi trạng thái eKYC cụ thể từ Database
+            // Giả định bạn bổ sung hàm getEkycStatus(userId) trả về String như: "verified", "pending", "rejected", hoặc null (chưa làm)
+            String ekycStatus = userDAO.getEkycStatus(userId);
+            
+            // Đồng bộ trạng thái eKYC vào Session để trang Dashboard hoặc các trang khác kiểm tra trực tiếp
+            session.setAttribute("verification_status", ekycStatus != null ? ekycStatus : "none");
 
-            // Luồng điều hướng phân quyền
+            // Luồng điều hướng phân quyền theo trạng thái mới
             if ("admin".equals(role)) {
                 response.sendRedirect("admin-dashboard.jsp");
             } 
             else if ("borrower".equals(role)) {
-                if (hasSubmittedEKYC) {
-                    response.sendRedirect("borrower_dashboard.jsp");
+                // Nếu đã từng làm eKYC (bất kể trạng thái là verified, pending, hay thậm chí là rejected)
+                if (ekycStatus != null && !ekycStatus.isEmpty()) {
+                    // Cho phép quay về Dashboard để xem thông báo lỗi hoặc tiến độ
+                    response.sendRedirect(request.getContextPath() + "/BorrowerDashboardServlet?action=dashboard");
                 } else {
+                    // Chưa từng khai báo thông tin eKYC lần nào -> ép ra trang đăng ký thông tin ban đầu
                     response.sendRedirect("ekyc.jsp");
                 }
             } 
             else if ("investor".equals(role)) {
-                if (hasSubmittedEKYC) {
+                if (ekycStatus != null && !ekycStatus.isEmpty()) {
                     response.sendRedirect("investor_dashboard.jsp");
                 } else {
                     response.sendRedirect("ekyc.jsp");
@@ -86,10 +91,8 @@ public class LoginController extends HttpServlet {
             }
             
         } else {
-            // Trường hợp 2: Có email nhưng sai mật khẩu
             request.setAttribute("errorMessage", "Mật khẩu không chính xác! Vui lòng thử lại.");
-            request.setAttribute("oldEmail", email); // Giữ lại email người dùng đỡ mất công gõ lại
-            
+            request.setAttribute("oldEmail", email); 
             request.getRequestDispatcher("login.jsp").forward(request, response);
         }
     }

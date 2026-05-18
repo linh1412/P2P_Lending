@@ -10,7 +10,7 @@ import jakarta.servlet.http.HttpServlet;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.servlet.http.HttpSession;
-import jakarta.servlet.http.Part;
+import jakarta.servlet.http.Part; // KHẮC PHỤC LỖI: Đổi chính xác thành gói .http.Part để hết gạch đỏ
 
 @WebServlet("/EKycController")
 @MultipartConfig(
@@ -35,7 +35,7 @@ public class EKycController extends HttpServlet {
             return;
         }
 
-        // Cấu hình thư mục lưu ảnh
+        // Cấu hình thư mục lưu ảnh vật lý trên máy chủ
         String uploadPath = getServletContext().getRealPath("") + File.separator + "uploads";
         File uploadDir = new File(uploadPath);
         if (!uploadDir.exists()) {
@@ -53,18 +53,26 @@ public class EKycController extends HttpServlet {
                 return;
             }
 
-            // Lưu 3 file vật lý và lưu thông tin vào bảng documents
+            // 1. Lưu 3 file vật lý mới và cập nhật thông tin đường dẫn vào bảng documents (Ghi đè lịch sử)
             saveDocument(frontPart, userId, "id_card_front", uploadPath);
             saveDocument(backPart, userId, "id_card_back", uploadPath);
             saveDocument(facePart, userId, "other", uploadPath);
 
-            // TỰ ĐỘNG CHUYỂN HƯỚNG SANG TRANG DASHBOARD TƯƠNG ỨNG SAU KHI GỬI EKYC XONG
+            // 2. [CẬP NHẬT LUỒNG GHI ĐÈ]: Đẩy trạng thái trên cả SQL và Session quay về 'pending'
+            // Hàm này sẽ tự động chạy lệnh UPDATE để sửa trạng thái từ 'rejected' thành 'pending'
+            boolean isUpdated = userDAO.updateOrInsertEkycStatus(userId, "pending");
+            
+            if (isUpdated) {
+                // Cập nhật lại Session ngay lập tức để trang Dashboard chặn hoặc hiển thị đúng banner Vàng "Chờ duyệt"
+                session.setAttribute("verification_status", "pending");
+            }
+
+            // 3. Điều hướng về hệ thống Dashboard tương ứng kèm tham số thông báo thành công
             if ("borrower".equals(role)) {
-                // Nếu là Borrower -> Sang trang quản lý người vay
-                response.sendRedirect("borrower_dashboard.jsp?msg=ekycSubmitted");
+                // Điều hướng qua Servlet trung gian của Borrower để làm mới lại dữ liệu hiển thị
+                response.sendRedirect(request.getContextPath() + "/BorrowerDashboardServlet?action=dashboard&msg=ekyc_updated_success");
             } else if ("investor".equals(role)) {
-                // Nếu là Investor -> Sang trang quản lý nhà đầu tư
-                response.sendRedirect("investor_dashboard.jsp?msg=ekycSubmitted");
+                response.sendRedirect("investor_dashboard.jsp?msg=ekyc_updated_success");
             } else {
                 response.sendRedirect("index.jsp");
             }

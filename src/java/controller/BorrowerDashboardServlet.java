@@ -30,6 +30,13 @@ public class BorrowerDashboardServlet extends HttpServlet {
             currentAction = "dashboard";
         }
 
+        // 🛠️ BỔ SUNG LUỒNG ĐIỀU HƯỚNG QUAY LẠI TRANG EKYC KHI BẤM CẬP NHẬT
+        if ("re_ekyc".equals(currentAction)) {
+            // Chuyển hướng trực tiếp sang trang ekyc.jsp ban đầu để upload lại ảnh dính lỗi
+            request.getRequestDispatcher("ekyc.jsp").forward(request, response);
+            return; // Ngắt luồng tại đây để tránh chạy các câu lệnh SQL không cần thiết phía dưới
+        }
+
         try {
             BorrowerDAO bDao = new BorrowerDAO();
 
@@ -37,8 +44,6 @@ public class BorrowerDashboardServlet extends HttpServlet {
             Borrower borrower = bDao.getBorrowerById(userId);
             
             // CƠ CHẾ DỰ PHÒNG CHỐNG TRỐNG TRONG QUÁ TRÌNH KHỞI CHẠY KIỂM THỬ:
-            // Nếu tài khoản đăng nhập chưa được tạo bản ghi bên bảng borrowers,
-            // hệ thống tự động lấy dữ liệu tài khoản có borrower_id = 1 (Linh Hà - 12.000.000đ) để test giao diện.
             if (borrower == null) {
                 borrower = bDao.getBorrowerById(1);
                 if (borrower != null) {
@@ -48,16 +53,28 @@ public class BorrowerDashboardServlet extends HttpServlet {
 
             // Khởi tạo các giá trị hiển thị mặc định
             String fullName = "Người dùng";
-            String verificationStatus = "pending";
             double monthlyIncome = 0.0;
             double maxLimit = 0.0;
 
             if (borrower != null) {
                 fullName = borrower.getFirstName() + " " + borrower.getLastName();
-                verificationStatus = borrower.getVerificationStatus();
                 monthlyIncome = borrower.getMonthlyIncome();
                 // Công thức tính toán hạn mức tự động: Gấp 3 lần thu nhập hàng tháng công bố
                 maxLimit = monthlyIncome * 3.0;
+            }
+
+            // [ĐỒNG BỘ LUỒNG MỚI]: Ưu tiên lấy trạng thái eKYC từ Session do Login/EKycController thiết lập
+            String verificationStatus = (String) session.getAttribute("verification_status");
+            
+            // Nếu session chưa có (ví dụ trường hợp vào thẳng URL không qua login), mới lấy từ DB hoặc mặc định
+            if (verificationStatus == null || "none".equals(verificationStatus)) {
+                if (borrower != null && borrower.getVerificationStatus() != null) {
+                    verificationStatus = borrower.getVerificationStatus();
+                } else {
+                    verificationStatus = "pending";
+                }
+                // Cập nhật ngược lại vào session để giữ tính thống nhất
+                session.setAttribute("verification_status", verificationStatus);
             }
 
             // Tính toán tổng dư nợ thực tế từ database
@@ -66,14 +83,27 @@ public class BorrowerDashboardServlet extends HttpServlet {
             // Tải danh sách đơn vay cá nhân thực tế
             List<LoanApplication> loanList = bDao.getLoansByBorrower(userId);
 
+            // Kiểm tra xem người dùng có khoản vay nào đang hoạt động hoặc chờ duyệt không
+            // Điều này dùng để bật/tắt nút "Đăng ký vay mới" trên giao diện dashboard
+            boolean hasActiveLoan = false;
+            if (loanList != null) {
+                for (LoanApplication loan : loanList) {
+                    if ("pending".equals(loan.getStatus()) || "approved".equals(loan.getStatus()) || "funded".equals(loan.getStatus())) {
+                        hasActiveLoan = true;
+                        break;
+                    }
+                }
+            }
+
             // Đẩy toàn bộ dữ liệu ra Request Scope để hiển thị lên trang JSP
             request.setAttribute("currentAction", currentAction);
             request.setAttribute("borrowerName", fullName);
-            request.setAttribute("trangThaiEkyc", verificationStatus);
+            request.setAttribute("trangThaiEkyc", verificationStatus); // Đồng bộ chuẩn tên biến với file JSP
             request.setAttribute("thuNhapKhai", monthlyIncome);
             request.setAttribute("hanMucToiDa", maxLimit);
             request.setAttribute("tongDuNo", currentDebt);
             request.setAttribute("myLoansList", loanList);
+            request.setAttribute("hasActiveLoan", hasActiveLoan);
 
             // Chuyển hướng đồng bộ thông tin sang trang hiển thị
             request.getRequestDispatcher("borrower_dashboard.jsp").forward(request, response);

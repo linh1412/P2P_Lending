@@ -36,7 +36,7 @@ public class BorrowerDAO {
         return null;
     }
 
-    // 2. Tính tổng dư nợ thực tế từ các khoản vay đang hoạt động
+    // 2. Tính tổng dư nợ thực tế từ các khoản vay đang hoạt động (Status = 'active')
     public double getCurrentDebt(long borrowerId) {
         double totalDebt = 0.0;
         String sql = "SELECT SUM(l.total_amount) FROM loans l " +
@@ -57,11 +57,12 @@ public class BorrowerDAO {
         return totalDebt;
     }
 
-    // 3. Lấy danh sách hồ sơ đơn vay của Borrower (Map chuẩn theo file LoanApplication.java)
+    // 3. OPTIMIZED: Lấy danh sách hồ sơ đơn vay của Borrower (Sắp xếp đơn mới nhất lên đầu)
     public List<LoanApplication> getLoansByBorrower(long borrowerId) {
         List<LoanApplication> list = new ArrayList<>();
+        // Bổ sung ORDER BY để đơn vay mới tạo hoặc vừa cập nhật hiển thị lên đầu Dashboard
         String sql = "SELECT application_id, amount_requested, term_months, created_at, cic_pdf_url, status " +
-                     "FROM loan_applications WHERE borrower_id = ?";
+                     "FROM loan_applications WHERE borrower_id = ? ORDER BY created_at DESC";
         try (Connection conn = DBConnection.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql)) {
             
@@ -84,5 +85,28 @@ public class BorrowerDAO {
             e.printStackTrace();
         }
         return list;
+    }
+
+    // =========================================================================
+    // HÀM BỔ SUNG THÊM (NẾU CẦN XỬ LÝ RIÊNG BIỆT CHO PHÂN HỆ BORROWER)
+    // =========================================================================
+
+    /**
+     * 4. BỔ SUNG: Cập nhật nhanh trạng thái eKYC của riêng bản ghi Borrower
+     * Hàm này có thể dùng bổ trợ song song với UserDAO để tối ưu hiệu năng điều hướng.
+     */
+    public boolean updateEkycStatus(long borrowerId, String status) {
+        String sql = "UPDATE borrowers SET verification_status = ? WHERE borrower_id = ?";
+        try (Connection conn = DBConnection.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            
+            ps.setString(1, status);
+            ps.setLong(2, borrowerId);
+            
+            return ps.executeUpdate() > 0;
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return false;
     }
 }

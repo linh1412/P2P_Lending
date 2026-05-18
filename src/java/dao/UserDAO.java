@@ -104,7 +104,8 @@ public class UserDAO {
         }
     }
 
-    // 3. Hàm kiểm tra Đăng nhập
+    // 3. OPTIMIZED & UPGRADED: Hàm kiểm tra Đăng nhập + Tích hợp đếm ảnh eKYC trực tiếp
+    // Trả về mảng 4 phần tử: { user_id, email, role, is_verified_status }
     public String[] loginCheck(String email, String password) {
         String sql = "SELECT user_id, email, role FROM users WHERE email = ? AND password = ?";
         try (Connection conn = DBConnection.getConnection();
@@ -113,10 +114,18 @@ public class UserDAO {
             ps.setString(2, password);
             try (ResultSet rs = ps.executeQuery()) {
                 if (rs.next()) {
+                    long userId = rs.getLong("user_id");
+                    String role = rs.getString("role");
+                    
+                    // Tận dụng trực tiếp hàm checkUserEKYC sẵn có của bạn để kiểm tra trạng thái hồ sơ ảnh
+                    boolean hasCompletedEkyc = checkUserEKYC(userId);
+                    String isVerifiedStatus = hasCompletedEkyc ? "TRUE" : "FALSE";
+
                     return new String[]{
-                        String.valueOf(rs.getLong("user_id")), 
+                        String.valueOf(userId), 
                         rs.getString("email"), 
-                        rs.getString("role")
+                        role,
+                        isVerifiedStatus // Phần tử thứ 4 dùng để phân luồng Login lần 1 / lần 2
                     };
                 }
             }
@@ -141,9 +150,8 @@ public class UserDAO {
         return false;
     }
 
-    // 5. OPTIMIZED: Hàm kiểm tra eKYC của Borrower (Gộp câu lệnh SQL tăng tốc độ truy vấn)
+    // 5. Hàm kiểm tra eKYC của Borrower (Gộp câu lệnh SQL tăng tốc độ truy vấn)
     public boolean checkBorrowerEKYC(long userId) {
-        // Gộp chung kiểm tra trạng thái của người vay để giảm số lượng kết nối DB thừa
         String sql = "SELECT verification_status FROM borrowers WHERE borrower_id = ?";
         String sqlCheckDocs = "SELECT COUNT(DISTINCT document_type) FROM documents WHERE user_id = ? AND document_type IN ('id_card_front', 'id_card_back')";
         
@@ -155,7 +163,7 @@ public class UserDAO {
                     if (rsStatus.next()) {
                         String status = rsStatus.getString("verification_status");
                         if ("rejected".equals(status)) {
-                            return false; // Bị từ chối thì ép buộc đá về trang ekyc.jsp ngay
+                            return false; // Bị từ chối thì ép buộc đá về trang ekyc.jsp ngay để làm lại
                         }
                     }
                 }
@@ -193,7 +201,7 @@ public class UserDAO {
         return false;
     }
 
-    // 7. Hàm tích hợp cũ phục vụ các bộ lọc Filter hoặc LoginController cũ nếu có tham chiếu
+    // 7. Hàm tích hợp phục vụ phân quyền kiểm tra tổng quát
     public boolean checkUserEKYC(long userId) {
         String sqlFetchRole = "SELECT role FROM users WHERE user_id = ?";
         try (Connection conn = DBConnection.getConnection();
@@ -215,13 +223,7 @@ public class UserDAO {
         return false;
     }
 
-    // =========================================================================
-    // CODE ĐỒNG BỘ: ĐƯA TRẠNG THÁI REJECTED GHI ĐÈ LÊN LẠI THÀNH PENDING
-    // =========================================================================
-
-    /**
-     * 8. Hàm lấy chuỗi trạng thái eKYC cụ thể từ Database để kiểm tra hiển thị Dashboard
-     */
+    // 8. Hàm lấy chuỗi trạng thái eKYC cụ thể từ Database để kiểm tra hiển thị Dashboard
     public String getEkycStatus(long userId) {
         String sqlFetchRole = "SELECT role FROM users WHERE user_id = ?";
         String sqlBorrower = "SELECT verification_status FROM borrowers WHERE borrower_id = ?";
@@ -259,9 +261,7 @@ public class UserDAO {
         return null;
     }
 
-    /**
-     * 9. Hàm ghi đè trạng thái eKYC: Đẩy thẳng trạng thái SQL về 'pending' khi upload lại hồ sơ thành công
-     */
+    // 9. Hàm ghi đè trạng thái eKYC: Đẩy thẳng trạng thái SQL về 'pending' khi upload lại hồ sơ thành công
     public boolean updateOrInsertEkycStatus(long userId, String status) {
         String sqlFetchRole = "SELECT role FROM users WHERE user_id = ?";
         
@@ -289,7 +289,6 @@ public class UserDAO {
                     psCheck.setLong(1, userId);
                     try (ResultSet rs = psCheck.executeQuery()) {
                         if (rs.next() && rs.getInt(1) > 0) {
-                            // Thực hiện UPDATE trạng thái đè từ 'rejected' -> 'pending'
                             try (PreparedStatement psUpdate = conn.prepareStatement(updateBorrower)) {
                                 psUpdate.setString(1, status);
                                 psUpdate.setLong(2, userId);

@@ -1,6 +1,7 @@
 package controller;
 
 import dao.UserDAO;
+import model.User; // Đã Import class Model chuẩn của bạn
 import jakarta.servlet.ServletException;
 import jakarta.servlet.annotation.WebServlet;
 import jakarta.servlet.http.HttpServlet;
@@ -43,14 +44,16 @@ public class LoginController extends HttpServlet {
             return; 
         }
 
-        // 3. Thực hiện kiểm tra đăng nhập bằng mật khẩu
-        String[] result = userDAO.loginCheck(trimmedEmail, password);
+        // 3. Thực hiện kiểm tra đăng nhập bằng mật khẩu (Nhận về đối tượng User thay vì String[])
+        User result = userDAO.loginCheck(trimmedEmail, password);
 
         if (result != null) {
             HttpSession session = request.getSession();
-            long userId = Long.parseLong(result[0]); 
-            String userEmail = result[1];
-            String role = result[2]; // 'admin', 'borrower', hoặc 'investor'
+            
+            // Đọc dữ liệu chuẩn xác từ Object User
+            long userId = result.getUser_id();  
+            String userEmail = result.getEmail();
+            String role = result.getRole(); // 'admin', 'borrower', hoặc 'investor'
 
             // Lưu thông tin cơ bản vào Session của phiên đăng nhập
             session.setAttribute("userId", userId);
@@ -61,7 +64,7 @@ public class LoginController extends HttpServlet {
             String ekycStatus = userDAO.getEkycStatus(userId);
             session.setAttribute("verification_status", ekycStatus != null ? ekycStatus : "none");
 
-            // [XỬ LÝ ĐỒNG BỘ LUỒNG MỚI]: Kiểm tra xem tài khoản đã thực hiện gửi đủ ảnh eKYC hay chưa
+            // Kiểm tra xem tài khoản đã thực hiện gửi đủ 3 ảnh eKYC hay chưa
             boolean hasCompletedEkyc = userDAO.checkUserEKYC(userId);
 
             // 4. Luồng điều hướng phân quyền theo trạng thái Đăng nhập lần 1 và lần 2
@@ -70,19 +73,19 @@ public class LoginController extends HttpServlet {
             } 
             else if ("borrower".equals(role)) {
                 if (hasCompletedEkyc) {
-                    // LOGIN LẦN 2: Đã gửi đầy đủ hồ sơ ảnh CCCD trước đó -> Vào Dashboard chính thức
+                    // LOGIN LẦN 2: Đã gửi đầy đủ hồ sơ ảnh -> Vào Dashboard chính thức
                     response.sendRedirect(request.getContextPath() + "/BorrowerDashboardServlet?action=dashboard");
                 } else {
-                    // LOGIN LẦN 1: Chưa làm eKYC hoặc hồ sơ bị 'rejected' bắt làm lại -> Ép sang trang gửi eKYC
+                    // LOGIN LẦN 1: Chưa làm eKYC hoặc bị từ chối -> Ép sang trang gửi eKYC
                     response.sendRedirect("ekyc.jsp");
                 }
             } 
             else if ("investor".equals(role)) {
                 if (hasCompletedEkyc) {
-                    // LOGIN LẦN 2: Đối với nhà đầu tư đã hoàn tất đẩy dữ liệu -> Chuyển đến URL dashboard tương ứng
+                    // LOGIN LẦN 2: Đã nộp ảnh xác thực -> Vào Dashboard Investor
                     response.sendRedirect("InvestorDashboardServlet?action=dashboard");
                 } else {
-                    // LOGIN LẦN 1: Ép sang trang tải tài liệu xác thực
+                    // LOGIN LẦN 1: Chưa up ảnh -> Ép sang trang ekyc.jsp tải tài liệu xác thực giống Borrower
                     response.sendRedirect("ekyc.jsp");
                 }
             } 

@@ -1,74 +1,105 @@
 package controller;
 
 import dao.UserDAO;
-import java.io.IOException;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.annotation.WebServlet;
 import jakarta.servlet.http.HttpServlet;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import java.io.IOException;
 
 @WebServlet("/RegisterController")
 public class RegisterController extends HttpServlet {
-    
-    private UserDAO userDAO = new UserDAO();
+
+    private final UserDAO userDAO = new UserDAO();
 
     @Override
-    protected void doPost(HttpServletRequest request, HttpServletResponse response) 
+    protected void doPost(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
-        
+
         request.setCharacterEncoding("UTF-8");
         response.setCharacterEncoding("UTF-8");
 
         String email = request.getParameter("email");
         String password = request.getParameter("password");
-        String role = request.getParameter("role");
+        String confirmPassword = request.getParameter("confirmPassword");
+        String role = request.getParameter("role"); // 'borrower' hoặc 'investor'
         String firstName = request.getParameter("firstName");
         String lastName = request.getParameter("lastName");
 
-        // === BƯỚC MỚI: Kiểm tra cấu trúc định dạng Email bằng Regex ===
-        // Định dạng yêu cầu: phải có ký tự hợp lệ trước @, có tên miền và đuôi mở rộng (ví dụ: .com, .vn, .edu.vn,...)
-        String emailRegex = "^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$";
-        
-        if (email == null || !email.matches(emailRegex)) {
-            // Nếu không đúng định dạng email, chặn lại và trả về trang đăng ký với mã lỗi invalidEmail
-            response.sendRedirect("register.jsp?error=invalidEmail");
-            return; // Dừng xử lý các bước tiếp theo
-        }
-        // ============================================================
-
-        // 1. Kiểm tra email đã tồn tại trong hệ thống chưa
-        if (userDAO.isEmailExists(email)) {
-            response.sendRedirect("register.jsp?error=emailExists");
+        // 1. Kiểm tra các trường thông tin chung bắt buộc
+        if (email == null || password == null || confirmPassword == null || role == null || firstName == null || lastName == null
+                || email.trim().isEmpty() || password.trim().isEmpty() || confirmPassword.trim().isEmpty() 
+                || role.trim().isEmpty() || firstName.trim().isEmpty() || lastName.trim().isEmpty()) {
+            response.sendRedirect("register.jsp?error=missingFields");
             return;
         }
 
-        String idCardNumber = "";
-        double monthlyIncome = 0.0;
-        String riskAppetite = "";
+        // 2. Kiểm tra mật khẩu khớp nhau (Backend Validation đề phòng bypass Client)
+        if (!password.equals(confirmPassword)) {
+            response.sendRedirect("register.jsp?error=passwordMismatch");
+            return;
+        }
 
-        if ("borrower".equals(role)) {
-            idCardNumber = request.getParameter("idCardNumber");
-            String incomeStr = request.getParameter("monthlyIncome");
-            if (incomeStr != null && !incomeStr.isEmpty()) {
-                monthlyIncome = Double.parseDouble(incomeStr);
+        // 3. ĐỒNG BỘ: Kiểm tra trùng lặp email trước khi chèn vào DB
+        if (userDAO.checkEmailExist(email.trim())) {
+            response.sendRedirect("register.jsp?error=emailExist");
+            return;
+        }
+
+        boolean registerStatus = false;
+
+        // 4. Xử lý dữ liệu đặc thù theo từng Vai trò
+        try {
+            if ("borrower".equals(role)) {
+                String idCardNumber = request.getParameter("idCardNumber");
+                String monthlyIncomeStr = request.getParameter("monthlyIncome");
+
+                if (idCardNumber == null || idCardNumber.trim().isEmpty() || monthlyIncomeStr == null || monthlyIncomeStr.trim().isEmpty()) {
+                    response.sendRedirect("register.jsp?error=missingFields");
+                    return;
+                }
+
+                double monthlyIncome;
+                try {
+                    monthlyIncome = Double.parseDouble(monthlyIncomeStr.trim());
+                } catch (NumberFormatException e) {
+                    response.sendRedirect("register.jsp?error=invalidIncome");
+                    return;
+                }
+
+                // Gọi hàm gộp của UserDAO (các trường investor truyền null)
+                registerStatus = userDAO.registerUser(email.trim(), password, role, firstName.trim(), lastName.trim(), idCardNumber.trim(), monthlyIncome, null);
+
+            } else if ("investor".equals(role)) {
+                String riskAppetite = request.getParameter("riskAppetite");
+
+                if (riskAppetite == null || riskAppetite.trim().isEmpty()) {
+                    response.sendRedirect("register.jsp?error=missingFields");
+                    return;
+                }
+
+                // Gọi hàm gộp của UserDAO (các trường borrower truyền null/0)
+                registerStatus = userDAO.registerUser(email.trim(), password, role, firstName.trim(), lastName.trim(), null, 0.0, riskAppetite.trim());
             }
-        } else if ("investor".equals(role)) {
-            riskAppetite = request.getParameter("riskAppetite");
+            
+        } catch (Exception e) {
+            e.printStackTrace();
+            response.sendRedirect("register.jsp?error=failed");
+            return;
         }
 
-        // 2. Thực hiện lưu vào Database
-        boolean isSuccess = userDAO.registerUser(
-            email, password, role, firstName, lastName, 
-            idCardNumber, monthlyIncome, riskAppetite
-        );
-
-        if (isSuccess) {
-            // Đăng ký thành công -> sang trang Login
-            response.sendRedirect("login.jsp?msg=success");
+        // 5. Kiểm tra kết quả lưu Database để chuyển hướng
+        if (registerStatus) {
+            response.sendRedirect("login.jsp?success=registered");
         } else {
-            // Đăng ký thất bại (thường do trùng số CCCD hoặc lỗi kết nối)
-            response.sendRedirect("register.jsp?error=dbError");
+            response.sendRedirect("register.jsp?error=failed");
         }
+    }
+
+    @Override
+    protected void doGet(HttpServletRequest request, HttpServletResponse response)
+            throws ServletException, IOException {
+        response.sendRedirect("register.jsp");
     }
 }

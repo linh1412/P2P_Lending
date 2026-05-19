@@ -1,5 +1,6 @@
 package dao;
 
+import model.User;
 import util.DBConnection;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
@@ -8,9 +9,12 @@ import java.sql.Statement;
 
 public class UserDAO {
 
-    // 1. Hàm kiểm tra Email đã tồn tại chưa
-    public boolean isEmailExists(String email) {
-        String sql = "SELECT email FROM users WHERE email = ?";
+    // ==========================================
+    // PHẦN 1: PHỤC VỤ CHO REGISTERCONTROLLER
+    // ==========================================
+
+    public boolean checkEmailExist(String email) {
+        String sql = "SELECT user_id FROM users WHERE email = ?";
         try (Connection conn = DBConnection.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql)) {
             ps.setString(1, email);
@@ -23,24 +27,6 @@ public class UserDAO {
         return false;
     }
 
-    // 1b. Hàm kiểm tra sự tồn tại của Email để phục vụ báo lỗi login chi tiết
-    public boolean checkEmailExist(String email) {
-        String sql = "SELECT COUNT(*) FROM users WHERE email = ?";
-        try (Connection conn = DBConnection.getConnection();
-             PreparedStatement ps = conn.prepareStatement(sql)) {
-            ps.setString(1, email);
-            try (ResultSet rs = ps.executeQuery()) {
-                if (rs.next()) {
-                    return rs.getInt(1) > 0;
-                }
-            }
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-        return false;
-    }
-
-    // 2. Hàm xử lý Đăng ký tài khoản (Transaction an toàn dữ liệu)
     public boolean registerUser(String email, String password, String role, 
                                 String firstName, String lastName, 
                                 String idCardNumber, double monthlyIncome, 
@@ -50,11 +36,16 @@ public class UserDAO {
         PreparedStatement psProfile = null;
         ResultSet rsKeys = null;
 
+        String sqlUser = "INSERT INTO users (email, password, role) VALUES (?, ?, ?)";
+        String sqlBorrower = "INSERT INTO borrowers (borrower_id, first_name, last_name, id_card_number, monthly_income, wallet_balance, verification_status, risk_level) "
+                           + "VALUES (?, ?, ?, ?, ?, 0.00, 'pending', 'Medium')";
+        String sqlInvestor = "INSERT INTO investors (investor_id, first_name, last_name, wallet_balance, frozen_balance, risk_appetite, verification_status) "
+                           + "VALUES (?, ?, ?, 0.00, 0.00, ?, 'pending')";
+
         try {
             conn = DBConnection.getConnection();
             conn.setAutoCommit(false); 
 
-            String sqlUser = "INSERT INTO users (email, password, role) VALUES (?, ?, ?)";
             psUser = conn.prepareStatement(sqlUser, Statement.RETURN_GENERATED_KEYS);
             psUser.setString(1, email);
             psUser.setString(2, password);
@@ -66,11 +57,10 @@ public class UserDAO {
             if (rsKeys.next()) {
                 generatedUserId = rsKeys.getLong(1);
             } else {
-                throw new Exception("Lỗi không lấy được ID người dùng mới.");
+                throw new Exception("Không lấy được ID từ bảng users.");
             }
 
             if ("borrower".equals(role)) {
-                String sqlBorrower = "INSERT INTO borrowers (borrower_id, first_name, last_name, id_card_number, monthly_income, verification_status) VALUES (?, ?, ?, ?, ?, 'pending')";
                 psProfile = conn.prepareStatement(sqlBorrower);
                 psProfile.setLong(1, generatedUserId);
                 psProfile.setString(2, firstName);
@@ -78,13 +68,13 @@ public class UserDAO {
                 psProfile.setString(4, idCardNumber);
                 psProfile.setDouble(5, monthlyIncome);
                 psProfile.executeUpdate();
-            } else if ("investor".equals(role)) {
-                String sqlInvestor = "INSERT INTO investors (investor_id, first_name, last_name, risk_appetite, verification_status) VALUES (?, ?, ?, ?, 'pending')";
+            } 
+            else if ("investor".equals(role)) {
                 psProfile = conn.prepareStatement(sqlInvestor);
                 psProfile.setLong(1, generatedUserId);
                 psProfile.setString(2, firstName);
                 psProfile.setString(3, lastName);
-                psProfile.setString(4, riskAppetite);
+                psProfile.setString(4, riskAppetite); 
                 psProfile.executeUpdate();
             }
 
@@ -100,13 +90,15 @@ public class UserDAO {
             try { if (rsKeys != null) rsKeys.close(); } catch (Exception e) {}
             try { if (psUser != null) psUser.close(); } catch (Exception e) {}
             try { if (psProfile != null) psProfile.close(); } catch (Exception e) {}
-            try { if (conn != null) conn.close(); } catch (Exception e) {}
+            try { if (conn != null) { conn.setAutoCommit(true); conn.close(); } } catch (Exception e) {}
         }
     }
 
-    // 3. OPTIMIZED & UPGRADED: Hàm kiểm tra Đăng nhập + Tích hợp đếm ảnh eKYC trực tiếp
-    // Trả về mảng 4 phần tử: { user_id, email, role, is_verified_status }
-    public String[] loginCheck(String email, String password) {
+    // ==========================================
+    // PHẦN 2: PHỤC VỤ CHO LOGINCONTROLLER
+    // ==========================================
+
+    public User loginCheck(String email, String password) {
         String sql = "SELECT user_id, email, role FROM users WHERE email = ? AND password = ?";
         try (Connection conn = DBConnection.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql)) {
@@ -114,19 +106,12 @@ public class UserDAO {
             ps.setString(2, password);
             try (ResultSet rs = ps.executeQuery()) {
                 if (rs.next()) {
-                    long userId = rs.getLong("user_id");
-                    String role = rs.getString("role");
-                    
-                    // Tận dụng trực tiếp hàm checkUserEKYC sẵn có của bạn để kiểm tra trạng thái hồ sơ ảnh
-                    boolean hasCompletedEkyc = checkUserEKYC(userId);
-                    String isVerifiedStatus = hasCompletedEkyc ? "TRUE" : "FALSE";
-
-                    return new String[]{
-                        String.valueOf(userId), 
-                        rs.getString("email"), 
-                        role,
-                        isVerifiedStatus // Phần tử thứ 4 dùng để phân luồng Login lần 1 / lần 2
-                    };
+                    User user = new User();
+                    // KHỚP 100% VỚI MODEl: setUser_id (có gạch dưới)
+                    user.setUser_id(rs.getLong("user_id")); 
+                    user.setEmail(rs.getString("email"));
+                    user.setRole(rs.getString("role"));
+                    return user;
                 }
             }
         } catch (Exception e) {
@@ -135,7 +120,71 @@ public class UserDAO {
         return null;
     }
 
-    // 4. Hàm hỗ trợ eKYC: Lưu đường dẫn ảnh vào bảng documents
+    public boolean checkUserEKYC(long userId) {
+        // Kiểm tra chung cho cả Borrower và Investor dựa vào 3 ảnh nộp lên
+        String sqlCountDocs = "SELECT COUNT(DISTINCT document_type) FROM documents WHERE user_id = ? "
+                            + "AND document_type IN ('id_card_front', 'id_card_back', 'selfie')";
+        
+        try (Connection conn = DBConnection.getConnection();
+             PreparedStatement psDocs = conn.prepareStatement(sqlCountDocs)) {
+            
+            String status = getEkycStatus(userId);
+            if ("rejected".equals(status)) {
+                return false; 
+            }
+
+            psDocs.setLong(1, userId);
+            try (ResultSet rs = psDocs.executeQuery()) {
+                if (rs.next()) {
+                    // Phải tải đủ 3 loại ảnh (mặt trước, mặt sau, selfie) mới tính là qua bước eKYC ban đầu
+                    return rs.getInt(1) >= 3; 
+                }
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return false;
+    }
+
+    public String getEkycStatus(long userId) {
+        String sqlRole = "SELECT role FROM users WHERE user_id = ?";
+        String sqlBorrower = "SELECT verification_status FROM borrowers WHERE borrower_id = ?";
+        String sqlInvestor = "SELECT verification_status FROM investors WHERE investor_id = ?";
+        
+        try (Connection conn = DBConnection.getConnection()) {
+            String role = "";
+            try (PreparedStatement psRole = conn.prepareStatement(sqlRole)) {
+                psRole.setLong(1, userId);
+                try (ResultSet rsRole = psRole.executeQuery()) {
+                    if (rsRole.next()) role = rsRole.getString("role");
+                }
+            }
+
+            if ("borrower".equals(role)) {
+                try (PreparedStatement psB = conn.prepareStatement(sqlBorrower)) {
+                    psB.setLong(1, userId);
+                    try (ResultSet rsB = psB.executeQuery()) {
+                        if (rsB.next()) return rsB.getString("verification_status");
+                    }
+                }
+            } else if ("investor".equals(role)) {
+                try (PreparedStatement psI = conn.prepareStatement(sqlInvestor)) {
+                    psI.setLong(1, userId);
+                    try (ResultSet rsI = psI.executeQuery()) {
+                        if (rsI.next()) return rsI.getString("verification_status");
+                    }
+                }
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return "none";
+    }
+
+    // ==========================================
+    // PHẦN 3: PHỤC VỤ CHO EKYCCONTROLLER / UPLOAD
+    // ==========================================
+
     public boolean insertDocument(Long userId, String type, String url) {
         String sql = "INSERT INTO documents (user_id, document_type, file_url) VALUES (?, ?, ?)";
         try (Connection conn = DBConnection.getConnection();
@@ -150,178 +199,31 @@ public class UserDAO {
         return false;
     }
 
-    // 5. Hàm kiểm tra eKYC của Borrower (Gộp câu lệnh SQL tăng tốc độ truy vấn)
-    public boolean checkBorrowerEKYC(long userId) {
-        String sql = "SELECT verification_status FROM borrowers WHERE borrower_id = ?";
-        String sqlCheckDocs = "SELECT COUNT(DISTINCT document_type) FROM documents WHERE user_id = ? AND document_type IN ('id_card_front', 'id_card_back')";
-        
-        try (Connection conn = DBConnection.getConnection()) {
-            // Bước A: Kiểm tra nhanh xem có bị Admin từ chối (rejected) hay không
-            try (PreparedStatement psStatus = conn.prepareStatement(sql)) {
-                psStatus.setLong(1, userId);
-                try (ResultSet rsStatus = psStatus.executeQuery()) {
-                    if (rsStatus.next()) {
-                        String status = rsStatus.getString("verification_status");
-                        if ("rejected".equals(status)) {
-                            return false; // Bị từ chối thì ép buộc đá về trang ekyc.jsp ngay để làm lại
-                        }
-                    }
-                }
-            }
-            
-            // Bước B: Nếu không dính líu rejected, đếm số lượng tài liệu đã nộp
-            try (PreparedStatement psDocs = conn.prepareStatement(sqlCheckDocs)) {
-                psDocs.setLong(1, userId);
-                try (ResultSet rsDocs = psDocs.executeQuery()) {
-                    if (rsDocs.next()) {
-                        return rsDocs.getInt(1) >= 2; 
-                    }
-                }
-            }
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-        return false;
-    }
+    public boolean updateOrInsertEkycStatus(long userId, String status) {
+        String sqlRole = "SELECT role FROM users WHERE user_id = ?";
+        String sqlBorrower = "UPDATE borrowers SET verification_status = ? WHERE borrower_id = ?";
+        String sqlInvestor = "UPDATE investors SET verification_status = ? WHERE investor_id = ?";
 
-    // 6. Hàm kiểm tra eKYC của Investor dựa trên số lượng ảnh mặt trước + mặt sau
-    public boolean checkInvestorEKYC(long userId) {
-        String sqlCheckDocs = "SELECT COUNT(DISTINCT document_type) FROM documents WHERE user_id = ? AND document_type IN ('id_card_front', 'id_card_back')";
-        try (Connection conn = DBConnection.getConnection();
-             PreparedStatement psDocs = conn.prepareStatement(sqlCheckDocs)) {
-            psDocs.setLong(1, userId);
-            try (ResultSet rsDocs = psDocs.executeQuery()) {
-                if (rsDocs.next()) {
-                    return rsDocs.getInt(1) >= 2;
-                }
-            }
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-        return false;
-    }
-
-    // 7. Hàm tích hợp phục vụ phân quyền kiểm tra tổng quát
-    public boolean checkUserEKYC(long userId) {
-        String sqlFetchRole = "SELECT role FROM users WHERE user_id = ?";
-        try (Connection conn = DBConnection.getConnection();
-             PreparedStatement ps = conn.prepareStatement(sqlFetchRole)) {
-            ps.setLong(1, userId);
-            try (ResultSet rs = ps.executeQuery()) {
-                if (rs.next()) {
-                    String role = rs.getString("role");
-                    if ("borrower".equals(role)) {
-                        return checkBorrowerEKYC(userId);
-                    } else if ("investor".equals(role)) {
-                        return checkInvestorEKYC(userId);
-                    }
-                }
-            }
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-        return false;
-    }
-
-    // 8. Hàm lấy chuỗi trạng thái eKYC cụ thể từ Database để kiểm tra hiển thị Dashboard
-    public String getEkycStatus(long userId) {
-        String sqlFetchRole = "SELECT role FROM users WHERE user_id = ?";
-        String sqlBorrower = "SELECT verification_status FROM borrowers WHERE borrower_id = ?";
-        String sqlInvestor = "SELECT verification_status FROM investors WHERE investor_id = ?";
-        
         try (Connection conn = DBConnection.getConnection()) {
             String role = "";
-            try (PreparedStatement psRole = conn.prepareStatement(sqlFetchRole)) {
+            try (PreparedStatement psRole = conn.prepareStatement(sqlRole)) {
                 psRole.setLong(1, userId);
                 try (ResultSet rsRole = psRole.executeQuery()) {
-                    if (rsRole.next()) {
-                        role = rsRole.getString("role");
-                    }
+                    if (rsRole.next()) role = rsRole.getString("role");
                 }
             }
-            
+
             if ("borrower".equals(role)) {
-                try (PreparedStatement psBorrower = conn.prepareStatement(sqlBorrower)) {
-                    psBorrower.setLong(1, userId);
-                    try (ResultSet rsB = psBorrower.executeQuery()) {
-                        if (rsB.next()) return rsB.getString("verification_status");
-                    }
+                try (PreparedStatement ps = conn.prepareStatement(sqlBorrower)) {
+                    ps.setString(1, status);
+                    ps.setLong(2, userId);
+                    return ps.executeUpdate() > 0;
                 }
             } else if ("investor".equals(role)) {
-                try (PreparedStatement psInvestor = conn.prepareStatement(sqlInvestor)) {
-                    psInvestor.setLong(1, userId);
-                    try (ResultSet rsI = psInvestor.executeQuery()) {
-                        if (rsI.next()) return rsI.getString("verification_status");
-                    }
-                }
-            }
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-        return null;
-    }
-
-    // 9. Hàm ghi đè trạng thái eKYC: Đẩy thẳng trạng thái SQL về 'pending' khi upload lại hồ sơ thành công
-    public boolean updateOrInsertEkycStatus(long userId, String status) {
-        String sqlFetchRole = "SELECT role FROM users WHERE user_id = ?";
-        
-        String checkBorrower = "SELECT COUNT(*) FROM borrowers WHERE borrower_id = ?";
-        String updateBorrower = "UPDATE borrowers SET verification_status = ? WHERE borrower_id = ?";
-        String insertBorrower = "INSERT INTO borrowers (borrower_id, verification_status) VALUES (?, ?)";
-        
-        String checkInvestor = "SELECT COUNT(*) FROM investors WHERE investor_id = ?";
-        String updateInvestor = "UPDATE investors SET verification_status = ? WHERE investor_id = ?";
-        String insertInvestor = "INSERT INTO investors (investor_id, verification_status) VALUES (?, ?)";
-
-        try (Connection conn = DBConnection.getConnection()) {
-            String role = "";
-            try (PreparedStatement psRole = conn.prepareStatement(sqlFetchRole)) {
-                psRole.setLong(1, userId);
-                try (ResultSet rsRole = psRole.executeQuery()) {
-                    if (rsRole.next()) {
-                        role = rsRole.getString("role");
-                    }
-                }
-            }
-
-            if ("borrower".equals(role)) {
-                try (PreparedStatement psCheck = conn.prepareStatement(checkBorrower)) {
-                    psCheck.setLong(1, userId);
-                    try (ResultSet rs = psCheck.executeQuery()) {
-                        if (rs.next() && rs.getInt(1) > 0) {
-                            try (PreparedStatement psUpdate = conn.prepareStatement(updateBorrower)) {
-                                psUpdate.setString(1, status);
-                                psUpdate.setLong(2, userId);
-                                return psUpdate.executeUpdate() > 0;
-                            }
-                        } else {
-                            try (PreparedStatement psInsert = conn.prepareStatement(insertBorrower)) {
-                                psInsert.setLong(1, userId);
-                                psInsert.setString(2, status);
-                                return psInsert.executeUpdate() > 0;
-                            }
-                        }
-                    }
-                }
-            } 
-            else if ("investor".equals(role)) {
-                try (PreparedStatement psCheck = conn.prepareStatement(checkInvestor)) {
-                    psCheck.setLong(1, userId);
-                    try (ResultSet rs = psCheck.executeQuery()) {
-                        if (rs.next() && rs.getInt(1) > 0) {
-                            try (PreparedStatement psUpdate = conn.prepareStatement(updateInvestor)) {
-                                psUpdate.setString(1, status);
-                                psUpdate.setLong(2, userId);
-                                return psUpdate.executeUpdate() > 0;
-                            }
-                        } else {
-                            try (PreparedStatement psInsert = conn.prepareStatement(insertInvestor)) {
-                                psInsert.setLong(1, userId);
-                                psInsert.setString(2, status);
-                                return psInsert.executeUpdate() > 0;
-                            }
-                        }
-                    }
+                try (PreparedStatement ps = conn.prepareStatement(sqlInvestor)) {
+                    ps.setString(1, status);
+                    ps.setLong(2, userId);
+                    return ps.executeUpdate() > 0;
                 }
             }
         } catch (Exception e) {

@@ -3,7 +3,6 @@ package model;
 import java.sql.Timestamp;
 
 public class User {
-    // Tên biến khớp hoàn toàn với tên cột trong database của bạn
     private long user_id;      
     private String email;     
     private String password;  
@@ -12,7 +11,6 @@ public class User {
 
     public User() {}
 
-    // Getter và Setter cho user_id
     public long getUser_id() {
         return user_id;
     }
@@ -21,7 +19,6 @@ public class User {
         this.user_id = user_id;
     }
 
-    // Getter và Setter cho email
     public String getEmail() {
         return email;
     }
@@ -30,7 +27,6 @@ public class User {
         this.email = email;
     }
 
-    // Getter và Setter cho password
     public String getPassword() {
         return password;
     }
@@ -39,7 +35,6 @@ public class User {
         this.password = password;
     }
 
-    // Getter và Setter cho role
     public String getRole() {
         return role;
     }
@@ -48,7 +43,6 @@ public class User {
         this.role = role;
     }
 
-    // Getter và Setter cho created_at
     public Timestamp getCreated_at() {
         return created_at;
     }

@@ -1,184 +1,260 @@
-<%@page contentType="text/html" pageEncoding="UTF-8"%>
+<%@ page contentType="text/html;charset=UTF-8" language="java" %>
 <!DOCTYPE html>
-<html>
+<html lang="vi">
 <head>
     <meta charset="UTF-8">
-    <title>Đăng ký tài khoản</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Đăng ký hệ thống P2P</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
-        body { font-family: Arial, sans-serif; background-color: #f4f4f4; padding: 20px; }
-        .form-container { width: 450px; margin: 30px auto; padding: 25px; background: white; border-radius: 8px; box-shadow: 0px 0px 15px #ccc; }
-        .form-group { margin-bottom: 15px; position: relative; }
-        .form-group label { display: block; margin-bottom: 5px; font-weight: bold; }
-        .form-group input, .form-group select { width: 100%; padding: 10px; box-sizing: border-box; border: 1px solid #ccc; border-radius: 4px; }
-        .password-wrapper { position: relative; }
-        .toggle-password { position: absolute; right: 10px; top: 50%; transform: translateY(-50%); cursor: pointer; color: #666; }
-        .btn-submit { width: 100%; padding: 12px; background-color: #007bff; color: white; border: none; border-radius: 4px; font-size: 16px; cursor: pointer; }
+        body { 
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
+            background-color: #f4f7f6; 
+            display: flex; 
+            justify-content: center; 
+            align-items: center; 
+            min-height: 100vh; 
+            margin: 0; 
+        }
+        .register-container { 
+            background: #fff; 
+            padding: 30px; 
+            border-radius: 12px; 
+            box-shadow: 0 8px 24px rgba(0,0,0,0.1); 
+            width: 100%; 
+            max-width: 450px; 
+            box-sizing: border-box; 
+            margin: 20px 0; 
+        }
+        h2 { text-align: center; margin-bottom: 25px; color: #333; }
+        .form-group { margin-bottom: 20px; }
+        .form-group label { display: block; margin-bottom: 8px; font-weight: 600; color: #555; }
+        .form-group input, .form-group select { 
+            width: 100%; 
+            padding: 12px; 
+            border: 1px solid #ddd; 
+            border-radius: 6px; 
+            box-sizing: border-box; 
+            font-size: 14px; 
+        }
+        
+        /* ĐỒNG BỘ CSS: Giữ chuẩn cấu trúc khung wrapper mật khẩu của trang login */
+        .password-wrapper { 
+            position: relative; 
+            display: flex; 
+            align-items: center; 
+        }
+        .password-wrapper input {
+            padding-right: 40px; /* Tránh text mật khẩu đè lên con mắt */
+        }
+        .toggle-password { 
+            position: absolute; 
+            right: 12px; 
+            cursor: pointer; 
+            color: #888; 
+            font-size: 18px; 
+        }
+        .toggle-password:hover { color: #333; }
+        
+        .btn-submit { 
+            width: 100%; 
+            padding: 12px; 
+            background-color: #007bff; 
+            border: none; 
+            color: white; 
+            font-size: 16px; 
+            font-weight: bold; 
+            border-radius: 6px; 
+            cursor: pointer; 
+            margin-top: 10px; 
+            transition: background 0.3s;
+        }
         .btn-submit:hover { background-color: #0056b3; }
-        .error-text { color: red; font-size: 13px; margin-top: 5px; display: none; }
-        .alert-error { color: red; background: #ffdada; padding: 10px; border-radius: 5px; text-align: center; margin-bottom: 15px; font-size: 14px; }
-        .login-link { text-align: center; margin-top: 20px; font-size: 15px; border-top: 1px solid #eee; padding-top: 15px; }
-        .login-link a { color: #007bff; text-decoration: none; font-weight: bold; }
+        .error-msg { 
+            background-color: #f8d7da; 
+            color: #721c24; 
+            padding: 10px; 
+            border-radius: 4px; 
+            margin-bottom: 20px; 
+            text-align: center; 
+            font-size: 14px; 
+            border: 1px solid #f5c6cb;
+        }
+        .dynamic-section { 
+            display: none; 
+            border-left: 3px solid #007bff; 
+            padding-left: 10px; 
+            margin-top: 15px; 
+        }
+        .login-link { text-align: center; margin-top: 20px; font-size: 14px; }
+        .login-link a { color: #007bff; text-decoration: none; }
     </style>
 </head>
 <body>
-    <div class="form-container">
-        <h2>Đăng ký hệ thống P2P</h2>
-        
-        <%-- PHẦN BÁO LỖI CHI TIẾT --%>
-        <% 
-            String error = request.getParameter("error");
-            if ("emailExists".equals(error)) { 
-        %>
-            <div class="alert-error">Email này đã được sử dụng. Vui lòng chọn email khác!</div>
-        <% } else if ("invalidEmail".equals(error)) { %>
-            <%-- ĐÃ THÊM: Hiển thị lỗi trả về từ Backend --%>
-            <div class="alert-error">Đăng ký thất bại: Định dạng email không hợp lệ!</div>
-        <% } else if ("dbError".equals(error)) { %>
-            <div class="alert-error">Lỗi: CCCD đã tồn tại hoặc hệ thống gặp sự cố!</div>
-        <% } %>
-        
-        <form action="RegisterController" method="POST" onsubmit="return validateForm()">
+
+<div class="register-container">
+    <h2>Đăng ký hệ thống P2P</h2>
+
+    <%-- Hiển thị thông báo lỗi từ Controller gửi về --%>
+    <% 
+        String error = request.getParameter("error");
+        if ("passwordMismatch".equals(error)) { %>
+            <div class="error-msg"><i class="fa-solid fa-circle-exclamation"></i> Mật khẩu xác nhận không trùng khớp!</div>
+     <% } else if ("emailExist".equals(error)) { %>
+            <div class="error-msg"><i class="fa-solid fa-circle-exclamation"></i> Email này đã được đăng ký trước đó!</div>
+     <% } else if ("failed".equals(error) || "dbError".equals(error)) { %>
+            <div class="error-msg"><i class="fa-solid fa-circle-exclamation"></i> Đăng ký thất bại! Hệ thống bận hoặc dữ liệu trùng lặp.</div>
+     <% } else if ("missingFields".equals(error)) { %>
+            <div class="error-msg"><i class="fa-solid fa-circle-exclamation"></i> Vui lòng điền đầy đủ tất cả các trường bắt buộc!</div>
+     <% } else if ("invalidIncome".equals(error)) { %>
+            <div class="error-msg"><i class="fa-solid fa-circle-exclamation"></i> Thu nhập nhập vào phải là một số hợp lệ!</div>
+     <% } 
+    %>
+    
+    <%-- Div hiển thị lỗi Client-side bằng Javascript --%>
+    <div id="jsError" class="error-msg" style="display: none;"></div>
+
+    <form action="RegisterController" method="POST" onsubmit="return validateForm()">
+        <div class="form-group">
+            <label for="role">Bạn tham gia với vai trò:</label>
+            <select id="role" name="role" onchange="toggleRoleFields()" required>
+                <option value="" disabled selected>-- Chọn vai trò --</option>
+                <option value="borrower">Người đi vay (Borrower)</option>
+                <option value="investor">Nhà đầu tư (Investor)</option>
+            </select>
+        </div>
+
+        <div class="form-group">
+            <label for="email">Email:</label>
+            <input type="email" id="email" name="email" placeholder="example@gmail.com" required>
+        </div>
+
+        <div class="form-group">
+            <label for="password">Mật khẩu:</label>
+            <div class="password-wrapper">
+                <input type="password" id="password" name="password" placeholder="Nhập mật khẩu..." required>
+                <i class="fa-solid fa-eye toggle-password" id="eyePassword" onclick="togglePasswordVisibility('password', 'eyePassword')"></i>
+            </div>
+        </div>
+
+        <div class="form-group">
+            <label for="confirmPassword">Xác nhận mật khẩu:</label>
+            <div class="password-wrapper">
+                <input type="password" id="confirmPassword" name="confirmPassword" placeholder="Nhập lại mật khẩu..." required>
+                <i class="fa-solid fa-eye toggle-password" id="eyeConfirm" onclick="togglePasswordVisibility('confirmPassword', 'eyeConfirm')"></i>
+            </div>
+        </div>
+
+        <div class="form-group">
+            <label for="firstName">Tên:</label>
+            <input type="text" id="firstName" name="firstName" placeholder="Nhập tên..." required>
+        </div>
+
+        <div class="form-group">
+            <label for="lastName">Họ:</label>
+            <input type="text" id="lastName" name="lastName" placeholder="Nhập họ..." required>
+        </div>
+
+        <%-- Các trường thông tin riêng cho Borrower --%>
+        <div id="borrowerFields" class="dynamic-section">
             <div class="form-group">
-                <label>Bạn tham gia với vai trò:</label>
-                <select name="role" id="role" onchange="toggleRoleFields()" required>
-                    <option value="borrower">Người đi vay (Borrower)</option>
-                    <option value="investor">Nhà đầu tư (Investor)</option>
+                <label for="idCardNumber">Số CCCD (12 số):</label>
+                <input type="text" id="idCardNumber" name="idCardNumber" placeholder="Nhập 12 số CCCD">
+            </div>
+            <div class="form-group">
+                <label for="monthlyIncome">Thu nhập (VND):</label>
+                <input type="number" id="monthlyIncome" name="monthlyIncome" min="0" step="1000" placeholder="Nhập mức thu nhập...">
+            </div>
+        </div>
+
+        <%-- Các trường thông tin riêng cho Investor --%>
+        <div id="investorFields" class="dynamic-section">
+            <div class="form-group">
+                <label for="riskAppetite">Khẩu vị rủi ro:</label>
+                <select id="riskAppetite" name="riskAppetite">
+                    <option value="Conservative">An toàn (Conservative)</option>
+                    <option value="Moderate">Vừa phải (Moderate)</option>
+                    <option value="Aggressive">Mạo hiểm (Aggressive)</option>
                 </select>
             </div>
-            
-            <div class="form-group">
-                <label>Email:</label>
-                <%-- Đust id và placeholder để người dùng dễ nhìn --%>
-                <input type="email" name="email" id="email" placeholder="example@gmail.com" required>
-                <%-- ĐÃ THÊM: Thẻ div hiển thị lỗi real-time cho ô email --%>
-                <div id="email-error" class="error-text">Cấu trúc email không đúng (Ví dụ hợp lệ: abc@gmail.com).</div>
-            </div>
-            
-            <div class="form-group">
-                <label>Số điện thoại:</label>
-                <input type="tel" name="phone" pattern="[0-9]{10}" placeholder="0912345678" required>
-            </div>
-            
-            <div class="form-group">
-                <label>Mật khẩu:</label>
-                <div class="password-wrapper">
-                    <input type="password" id="password" name="password" required>
-                    <i class="fa-solid fa-eye toggle-password" onclick="togglePasswordVisibility('password', this)"></i>
-                </div>
-                <div id="password-error" class="error-text">Mật khẩu tối thiểu 8 ký tự, có chữ hoa và ký tự đặc biệt.</div>
-            </div>
-            
-            <div class="form-group">
-                <label>Xác nhận mật khẩu:</label>
-                <div class="password-wrapper">
-                    <input type="password" id="confirmPassword" required>
-                    <i class="fa-solid fa-eye toggle-password" onclick="togglePasswordVisibility('confirmPassword', this)"></i>
-                </div>
-                <div id="confirm-error" class="error-text">Mật khẩu xác nhận không đúng!</div>
-            </div>
-            
-            <div class="form-group">
-                <label>Tên:</label>
-                <input type="text" name="firstName" required>
-            </div>
-            
-            <div class="form-group">
-                <label>Họ:</label>
-                <input type="text" name="lastName" required>
-            </div>
-
-            <div id="borrowerFields">
-                <div class="form-group">
-                    <label>Số CCCD (12 số):</label>
-                    <input type="text" name="idCardNumber" id="idCardNumber">
-                </div>
-                <div class="form-group">
-                    <label>Thu nhập (VND):</label>
-                    <input type="number" name="monthlyIncome" id="monthlyIncome">
-                </div>
-            </div>
-
-            <div id="investorFields" style="display: none;">
-                <div class="form-group">
-                    <label>Khẩu vị rủi ro:</label>
-                    <select name="riskAppetite" id="riskAppetite">
-                        <option value="Conservative">An toàn</option>
-                        <option value="Moderate">Trung dung</option>
-                        <option value="Aggressive">Mạo hiểm</option>
-                    </select>
-                </div>
-            </div>
-
-            <button type="submit" class="btn-submit">Hoàn tất đăng ký</button>
-        </form>
-
-        <%-- DÒNG CHUYỂN HƯỚNG SANG LOGIN --%>
-        <div class="login-link">
-            Bạn đã có tài khoản? <a href="login.jsp">Đăng nhập ngay</a>
         </div>
+
+        <button type="submit" class="btn-submit">Hoàn tất đăng ký</button>
+    </form>
+
+    <div class="login-link">
+        Đã có tài khoản? <a href="login.jsp">Đăng nhập ngay</a>
     </div>
+</div>
 
-    <script>
-        function togglePasswordVisibility(inputId, icon) {
-            const input = document.getElementById(inputId);
-            input.type = input.type === "password" ? "text" : "password";
-            icon.classList.toggle("fa-eye");
-            icon.classList.toggle("fa-eye-slash");
+<script>
+    // HÀM JS CẢI TIẾN: Thay đổi Class Fa-Eye chuẩn mực cho cả hai ô độc lập
+    function togglePasswordVisibility(inputId, iconId) {
+        const passwordInput = document.getElementById(inputId);
+        const eyeIcon = document.getElementById(iconId);
+        
+        if (passwordInput.type === "password") {
+            passwordInput.type = "text";
+            eyeIcon.classList.remove("fa-eye");
+            eyeIcon.classList.add("fa-eye-slash");
+        } else {
+            passwordInput.type = "password";
+            eyeIcon.classList.remove("fa-eye-slash");
+            eyeIcon.classList.add("fa-eye");
+        }
+    }
+
+    function toggleRoleFields() {
+        var role = document.getElementById("role").value;
+        var borrowerFields = document.getElementById("borrowerFields");
+        var investorFields = document.getElementById("investorFields");
+
+        var idCard = document.getElementById("idCardNumber");
+        var income = document.getElementById("monthlyIncome");
+
+        if (role === "borrower") {
+            borrowerFields.style.display = "block";
+            investorFields.style.display = "none";
+            idCard.required = true;
+            income.required = true;
+        } else if (role === "investor") {
+            borrowerFields.style.display = "none";
+            investorFields.style.display = "block";
+            idCard.required = false;
+            income.required = false;
+        } else {
+            borrowerFields.style.display = "none";
+            investorFields.style.display = "none";
+        }
+    }
+
+    function validateForm() {
+        var password = document.getElementById("password").value;
+        var confirmPassword = document.getElementById("confirmPassword").value;
+        var role = document.getElementById("role").value;
+        var jsError = document.getElementById("jsError");
+
+        jsError.style.display = "none";
+        jsError.innerHTML = "";
+
+        if (password !== confirmPassword) {
+            jsError.innerHTML = "<i class='fa-solid fa-circle-exclamation'></i> Mật khẩu xác nhận không trùng khớp!";
+            jsError.style.display = "block";
+            return false;
         }
 
-        function toggleRoleFields() {
-            const role = document.getElementById("role").value;
-            const isBorrower = role === "borrower";
-            document.getElementById("borrowerFields").style.display = isBorrower ? "block" : "none";
-            document.getElementById("investorFields").style.display = isBorrower ? "none" : "block";
-            document.getElementById("idCardNumber").required = isBorrower;
-            document.getElementById("monthlyIncome").required = isBorrower;
+        if (role === "borrower") {
+            var idCard = document.getElementById("idCardNumber").value.trim();
+            var idCardPattern = /^\d{12}$/;
+            if (!idCardPattern.test(idCard)) {
+                jsError.innerHTML = "<i class='fa-solid fa-circle-exclamation'></i> Số CCCD phải nhập chính xác 12 chữ số!";
+                jsError.style.display = "block";
+                return false;
+            }
         }
 
-        function validateForm() {
-            const email = document.getElementById("email").value;
-            const password = document.getElementById("password").value;
-            const confirmPassword = document.getElementById("confirmPassword").value;
-            const role = document.getElementById("role").value;
-            
-            // Định nghĩa Regex kiểm tra cấu trúc email (yêu cầu nghiêm ngặt phần tên miền)
-            const emailPattern = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
-            const passwordPattern = /^(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*(),.?":{}|<>])[A-Za-z\d!@#$%^&*(),.?":{}|<>]{8,}$/;
-
-            // Ẩn toàn bộ thông báo lỗi trước khi kiểm tra lại
-            document.getElementById("email-error").style.display = "none";
-            document.getElementById("password-error").style.display = "none";
-            document.getElementById("confirm-error").style.display = "none";
-
-            // 1. ĐÃ THÊM: Kiểm tra cấu trúc Email bằng Javascript
-            if (!emailPattern.test(email)) {
-                document.getElementById("email-error").style.display = "block";
-                document.getElementById("email").focus();
-                return false;
-            }
-
-            // 2. Kiểm tra mật khẩu
-            if (!passwordPattern.test(password)) {
-                document.getElementById("password-error").style.display = "block";
-                document.getElementById("password").focus();
-                return false;
-            }
-            if (password !== confirmPassword) {
-                document.getElementById("confirm-error").style.display = "block";
-                document.getElementById("confirmPassword").focus();
-                return false;
-            }
-            if (role === "borrower") {
-                const idCard = document.getElementById("idCardNumber").value;
-                if (!/^[0-9]{12}$/.test(idCard)) {
-                    alert("CCCD phải có đúng 12 chữ số!");
-                    document.getElementById("idCardNumber").focus();
-                    return false;
-                }
-            }
-            return true;
-        }
-    </script>
+        return true;
+    }
+</script>
 </body>
 </html>

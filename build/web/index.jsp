@@ -4,7 +4,6 @@
 <head>
     <meta charset="UTF-8">
     <title>Hệ thống Cho vay Ngang hàng P2P Lending</title>
-    <!-- Nhúng thư viện Font Awesome để trang chủ nhìn chuyên nghiệp hơn -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
         body { 
@@ -69,7 +68,6 @@
         <h1><i class="fa-solid fa-handshake-angle" style="color: #007bff;"></i> P2P LENDING</h1>
         <p class="subtitle">Hệ thống Kết nối Tài chính Ngang hàng Toàn diện</p>
         
-        <!-- Khối chức năng dành cho thành viên thông thường -->
         <a href="register.jsp" class="btn btn-register">
             <i class="fa-solid fa-user-plus"></i> Đăng Ký Tài Khoản Mới
         </a>
@@ -78,9 +76,8 @@
             <i class="fa-solid fa-right-to-bracket"></i> Đăng Nhập Hệ Thống
         </a>
         
-        <!-- Khối chức năng dành riêng cho Admin -->
         <div class="admin-section">
-            <a href="login.jsp" class="btn btn-admin">
+            <a href="admin_login.jsp" class="btn btn-admin">
                 <i class="fa-solid fa-user-gear"></i> Cổng Quản Trị (Admin)
             </a>
         </div>

@@ -72,6 +72,9 @@
         .btn-submit:hover { background-color: var(--primary-hover); }
         .alert-lock { background-color: #fef2f2; border: 1px solid #fca5a5; color: #991b1b; padding: 40px 30px; border-radius: 8px; text-align: center; max-width: 500px; margin: 40px auto; }
         .alert-lock h3 { margin: 15px 0 10px 0; }
+
+        .preview-box { margin-top: 8px; display: none; text-align: center; background: #f1f5f9; padding: 10px; border-radius: 6px; border: 1px dashed #cbd5e1; }
+        .preview-box img { max-width: 100%; max-height: 150px; border-radius: 4px; object-fit: contain; }
     </style>
 </head>
 <body>
@@ -80,9 +83,9 @@
         <div>
             <div class="sidebar-brand">🏛️ <span>P2P LENDING</span></div>
             <ul class="sidebar-menu">
-                <li class="${empty currentAction || currentAction == 'dashboard' ? 'active' : ''}">
+                <li class="${empty currentAction || currentAction == 'dashboard' ? 'active' : ''}" id="menu-dashboard">
                     <a href="${pageContext.request.contextPath}/BorrowerDashboardServlet?action=dashboard">📊 Tổng Quan Main</a>
-                </li>
+                </li >
                 
                 <c:choose>
                     <c:when test="${trangThaiEkyc == 'rejected'}">
@@ -114,7 +117,7 @@
 
     <div class="main-content">
         <div class="topbar">
-            <div class="topbar-title">
+            <div class="topbar-title" id="dynamic-topbar-title">
                 <c:choose>
                     <c:when test="${currentAction == 'create_loan'}">Đăng Ký Khoản Vay Mới</c:when>
                     <c:when test="${currentAction == 'market_loans'}">Khoản Vay Đang Gọi Vốn Toàn Sàn</c:when>
@@ -141,13 +144,6 @@
 
         <div class="container">
             
-            <%-- THÔNG BÁO THÀNH CÔNG KHI SUBMIT ĐƠN VAY MỚI --%>
-            <c:if test="${param.msg == 'loan_submit_success'}">
-                <div class="alert-banner alert-banner-success">
-                    <strong>🎉 Đăng ký thành công:</strong> Đơn đăng ký khoản vay của bạn đã được tiếp nhận và chuyển sang trạng thái <b>Chờ duyệt</b>. Ban quản trị sẽ sớm thẩm định tệp hồ sơ CIC PDF đính kèm.
-                </div>
-            </c:if>
-
             <%-- THÔNG BÁO TRẠNG THÁI CẬP NHẬT EKYC THÀNH CÔNG --%>
             <c:if test="${param.msg == 'ekyc_updated_success'}">
                 <div class="alert-banner alert-banner-success">
@@ -155,11 +151,21 @@
                 </div>
             </c:if>
 
+            <%-- THÔNG BÁO THÀNH CÔNG KHI SUBMIT ĐƠN VAY MỚI --%>
+            <c:if test="${param.msg == 'loan_submit_success'}">
+                <div class="alert-banner alert-banner-success">
+                    <strong>🎉 Đăng ký thành công:</strong> Đơn đăng ký khoản vay của bạn đã được tiếp nhận và chuyển sang trạng thái <b>Chờ duyệt</b>. Ban quản trị sẽ sớm thẩm định tệp hồ sơ CIC PDF đính kèm.
+                </div>
+            </c:if>
+
+            <%-- ĐOẠN ĐÃ SỬA: PHỐI HỢP THÊM PARAMETER ĐỂ TRÁNH LỖI ĐIỀU HƯỚNG CỦA SERVLET --%>
             <c:if test="${param.msg == 'error_ekyc_rejected' || (trangThaiEkyc == 'rejected' && currentAction != 're_ekyc')}">
-                <div class="alert-banner alert-banner-danger">
+                <div class="alert-banner alert-banner-danger" id="rejected-warning-banner">
                     <strong>⚠️ Quyền truy cập bị hạn chế:</strong> Hồ sơ định danh cá nhân (eKYC) của bạn hiện đang ở trạng thái <b>Từ chối (Rejected)</b>. Hệ thống đã khóa chức năng đăng ký khoản vay. 
                     <br>
-                    <a href="${pageContext.request.contextPath}/BorrowerDashboardServlet?action=re_ekyc" class="btn-action-ekyc">🔄 Cập nhật lại thông tin eKYC ngay</a>
+                    <a href="${pageContext.request.contextPath}/BorrowerDashboardServlet?action=re_ekyc" 
+                       onclick="this.href=this.href + '&currentAction=re_ekyc';" 
+                       class="btn-action-ekyc">🔄 Cập nhật lại thông tin eKYC ngay</a>
                 </div>
             </c:if>
             
@@ -172,106 +178,124 @@
             <c:choose>
                 <%-- TAB 1: TỔNG QUAN MAIN --%>
                 <c:when test="${empty currentAction || currentAction == 'dashboard'}">
-                    <div class="stats-grid">
-                        <div class="stat-card">
-                            <div class="stat-info">
-                                <h5>HẠN MỨC VAY TỐI ĐA</h5>
-                                <h2><fmt:formatNumber value="${not empty hanMucToiDa ? hanMucToiDa : 0}" type="number" groupingUsed="true"/> đ</h2>
+                    <div id="main-dashboard-view">
+                        <div class="stats-grid">
+                            <div class="stat-card">
+                                <div class="stat-info">
+                                    <h5>HẠN MỨC VAY TỐI ĐA</h5>
+                                    <h2><fmt:formatNumber value="${not empty hanMucToiDa ? hanMucToiDa : 0}" type="number" groupingUsed="true"/> đ</h2>
+                                </div>
+                            </div>
+                            <div class="stat-card">
+                                <div class="stat-info">
+                                    <h5>TỔNG DƯ NỢ HIỆN TẠI</h5>
+                                    <h2 style="color: #ef4444;"><fmt:formatNumber value="${not empty tongDuNo ? tongDuNo : 0}" type="number" groupingUsed="true"/> đ</h2>
+                                </div>
+                            </div>
+                            <div class="stat-card">
+                                <div class="stat-info">
+                                    <h5>THU NHẬP KÊ KHAI</h5>
+                                    <h2 style="color: #10b981;"><fmt:formatNumber value="${not empty thuNhapKhai ? thuNhapKhai : 0}" type="number" groupingUsed="true"/> đ</h2>
+                                </div>
                             </div>
                         </div>
-                        <div class="stat-card">
-                            <div class="stat-info">
-                                <h5>TỔNG DƯ NỢ HIỆN TẠI</h5>
-                                <h2 style="color: #ef4444;"><fmt:formatNumber value="${not empty tongDuNo ? tongDuNo : 0}" type="number" groupingUsed="true"/> đ</h2>
-                            </div>
-                        </div>
-                        <div class="stat-card">
-                            <div class="stat-info">
-                                <h5>THU NHẬP KÊ KHAI</h5>
-                                <h2 style="color: #10b981;"><fmt:formatNumber value="${not empty thuNhapKhai ? thuNhapKhai : 0}" type="number" groupingUsed="true"/> đ</h2>
-                            </div>
-                        </div>
-                    </div>
 
-                    <div class="data-card">
-                        <h4>📄 Hồ Sơ Giao Dịch Khoản Vay Của Bạn</h4>
-                        <table class="table-loan">
-                            <thead>
-                                <tr>
-                                    <th>MÃ ĐƠN VAY</th>
-                                    <th>SỐ TIỀN ĐĂNG KÝ</th>
-                                    <th>KỲ HẠN VAY</th>
-                                    <th>NGÀY TẠO ĐƠN</th>
-                                    <th style="text-align: center;">XEM CIC</th>
-                                    <th>TRẠNG THÁI HỒ SƠ</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <c:choose>
-                                    <c:when test="${not empty myLoansList}">
-                                        <c:forEach var="myLoan" items="${myLoansList}">
-                                            <tr>
-                                                <td>#<strong><c:out value="${myLoan.applicationId}"/></strong></td>
-                                                <td><strong><fmt:formatNumber value="${myLoan.amountRequested}" type="number" groupingUsed="true"/> đ</strong></td>
-                                                <td><c:out value="${myLoan.termMonths}"/> Tháng</td>
-                                                <td><fmt:formatDate value="${myLoan.createdAt}" pattern="dd/MM/yyyy HH:mm"/></td>
-                                                <td style="text-align: center;">
-                                                    <%-- ĐOẠN ĐÃ ĐƯỢC FIX LỖI: Không sử dụng c:out bọc ngoài thẻ href để tránh escape ký tự URL --%>
-                                                    <c:choose>
-                                                        <c:when test="${not empty myLoan.cicPdfUrl}">
-                                                            <a href="${myLoan.cicPdfUrl}" target="_blank" style="color:#2563eb; text-decoration:underline; font-weight: bold;">
-                                                                📄 Xem PDF
-                                                            </a>
-                                                        </c:when>
-                                                        <c:otherwise>
-                                                            <span style="color: #94a3b8; font-style: italic; font-size: 13px;">Chưa có file</span>
-                                                        </c:otherwise>
-                                                    </c:choose>
-                                                </td>
-                                                <td>
-                                                    <c:choose>
-                                                        <c:when test="${myLoan.status == 'pending'}"><span style="color:#a16207; font-weight:600;">Chờ duyệt</span></c:when>
-                                                        <c:when test="${myLoan.status == 'approved'}"><span style="color:#2563eb; font-weight:600;">Đã duyệt</span></c:when>
-                                                        <c:when test="${myLoan.status == 'funded'}"><span style="color:#16a34a; font-weight:600;">Đã gọi vốn</span></c:when>
-                                                        <c:otherwise><span style="color:#dc2626; font-weight:600;">Từ chối</span></c:otherwise>
-                                                    </c:choose>
-                                                </td>
-                                            </tr>
-                                        </c:forEach>
-                                    </c:when>
-                                    <c:otherwise>
-                                        <tr><td colspan="6" style="text-align: center; color: #94a3b8; padding: 25px;">Bạn chưa có đơn đăng ký vay cá nhân nào.</td></tr>
-                                    </c:otherwise>
-                                </c:choose>
-                            </tbody>
-                        </table>
+                        <div class="data-card">
+                            <h4>📄 Hồ Sơ Giao Dịch Khoản Vay Của Bạn</h4>
+                            <table class="table-loan">
+                                <thead>
+                                    <tr>
+                                        <th>MÃ ĐƠN VAY</th>
+                                        <th>SỐ TIỀN ĐĂNG KÝ</th>
+                                        <th>KỲ HẠN VAY</th>
+                                        <th>NGÀY TẠO ĐƠN</th>
+                                        <th style="text-align: center;">XEM CIC</th>
+                                        <th>TRẠNG THÁI HỒ SƠ</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <c:choose>
+                                        <c:when test="${not empty myLoansList}">
+                                            <c:forEach var="myLoan" items="${myLoansList}">
+                                                <tr>
+                                                    <td>#<strong><c:out value="${myLoan.applicationId}"/></strong></td>
+                                                    <td><strong><fmt:formatNumber value="${myLoan.amountRequested}" type="number" groupingUsed="true"/> đ</strong></td>
+                                                    <td><c:out value="${myLoan.termMonths}"/> Tháng</td>
+                                                    <td><fmt:formatDate value="${myLoan.createdAt}" pattern="dd/MM/yyyy HH:mm"/></td>
+                                                    <td style="text-align: center;">
+                                                        <c:choose>
+                                                            <c:when test="${not empty myLoan.cicPdfUrl}">
+                                                                <a href="${myLoan.cicPdfUrl}" target="_blank" style="color:#2563eb; text-decoration:underline; font-weight: bold;">
+                                                                    📄 Xem PDF
+                                                                </a>
+                                                            </c:when>
+                                                            <c:otherwise>
+                                                                <span style="color: #94a3b8; font-style: italic; font-size: 13px;">Chưa có file</span>
+                                                            </c:otherwise>
+                                                        </c:choose>
+                                                    </td>
+                                                    <td>
+                                                        <c:choose>
+                                                            <c:when test="${myLoan.status == 'pending'}"><span style="color:#a16207; font-weight:600;">Chờ duyệt</span></c:when>
+                                                            <c:when test="${myLoan.status == 'approved'}"><span style="color:#2563eb; font-weight:600;">Đã duyệt</span></c:when>
+                                                            <c:when test="${myLoan.status == 'funded'}"><span style="color:#16a34a; font-weight:600;">Đã gọi vốn</span></c:when>
+                                                            <c:otherwise><span style="color:#dc2626; font-weight:600;">Từ chối</span></c:otherwise>
+                                                        </c:choose>
+                                                    </td>
+                                                </tr>
+                                            </c:forEach>
+                                        </c:when>
+                                        <c:otherwise>
+                                            <tr><td colspan="6" style="text-align: center; color: #94a3b8; padding: 25px;">Bạn chưa có đơn đăng ký vay cá nhân nào.</td></tr>
+                                        </c:otherwise>
+                                    </c:choose>
+                                </tbody>
+                            </table>
+                        </div>
                     </div>
                 </c:when>
 
-                <%-- TAB ĐẶC BIỆT: CẬP NHẬT LẠI EKYC KHI BỊ REJECTED --%>
+                <%-- TAB ĐẶC BIỆT: CẬP NHẬT LẠI EKYC BẰNG FILE ẢNH KHI BỊ REJECTED --%>
                 <c:when test="${currentAction == 're_ekyc'}">
-                    <div class="data-card" style="max-width: 600px; margin: 0 auto;">
+                    <div class="data-card" id="re-ekyc-form-view" style="max-width: 600px; margin: 0 auto;">
                         <h4>🔄 Làm mới hồ sơ định danh cá nhân (eKYC)</h4>
-                        <p style="font-size: 13px; color: #64748b; margin-bottom: 20px;">Vui lòng điều chỉnh lại thông tin chính xác theo giấy tờ tùy thân của bạn để gửi Ban quản trị xét duyệt lại.</p>
+                        <p style="font-size: 13px; color: #64748b; margin-bottom: 20px;">Vui lòng chụp và tải lại ảnh giấy tờ rõ ràng, chính chủ để gửi lại Ban quản trị xét duyệt (Ghi đè SQL trạng thái cũ).</p>
                         
-                        <form action="${pageContext.request.contextPath}/BorrowerDashboardServlet" method="POST">
+                        <form action="${pageContext.request.contextPath}/BorrowerDashboardServlet" method="POST" enctype="multipart/form-data">
                             <input type="hidden" name="action" value="update_ekyc">
                             
                             <div class="form-group">
-                                <label>Họ (và tên đệm)</label>
-                                <input type="text" name="firstName" class="form-control" value="<c:out value="${borrowerObj.firstName}"/>" required>
+                                <label>Ảnh mặt trước CCCD / CMND <span style="color:red;">*</span></label>
+                                <input type="file" name="cccd_front" class="form-control" accept="image/*" required onchange="previewImage(this, 'front_preview')">
+                                <div id="front_preview" class="preview-box">
+                                    <img src="" alt="Mặt trước CCCD Preview">
+                                </div>
                             </div>
+
                             <div class="form-group">
-                                <label>Tên chính xác</label>
-                                <input type="text" name="lastName" class="form-control" value="<c:out value="${borrowerObj.lastName}"/>" required>
+                                <label>Ảnh mặt sau CCCD / CMND <span style="color:red;">*</span></label>
+                                <input type="file" name="cccd_back" class="form-control" accept="image/*" required onchange="previewImage(this, 'back_preview')">
+                                <div id="back_preview" class="preview-box">
+                                    <img src="" alt="Mặt sau CCCD Preview">
+                                </div>
                             </div>
+
                             <div class="form-group">
-                                <label>Thu nhập hằng tháng kê khai thực tế (VNĐ)</label>
-                                <input type="number" name="monthlyIncome" class="form-control" value="${not empty borrowerObj.monthlyIncome ? borrowerObj.monthlyIncome : ''}" required>
-                                <span class="form-hint">Hạn mức vay mới sẽ tự động cập nhật bằng: Thu nhập x 3.0 lần sau khi được duyệt.</span>
+                                <label>Ảnh chân dung chụp cùng CCCD (Selfie) <span style="color:red;">*</span></label>
+                                <input type="file" name="selfie_avatar" class="form-control" accept="image/*" required onchange="previewImage(this, 'selfie_preview')">
+                                <div id="selfie_preview" class="preview-box">
+                                    <img src="" alt="Ảnh chân dung Preview">
+                                </div>
+                            </div>
+
+                            <div class="form-group">
+                                <label>Thu nhập hằng tháng kê khai (VNĐ)</label>
+                                <input type="number" name="monthlyIncome" class="form-control" value="${not empty borrowerObj.monthlyIncome ? borrowerObj.monthlyIncome : ''}" required oninput="previewCurrencyUpdate(this.value)">
+                                <div id="updateCurrencyPreview" class="currency-preview"></div>
+                                <span class="form-hint">Hạn mức sẽ tự động tính toán lại sau khi tài khoản chuyển về trạng thái hợp lệ.</span>
                             </div>
                             
-                            <button type="submit" class="btn-submit" style="background-color: #f59e0b; color: #0f172a;">Gửi lại hồ sơ kiểm duyệt</button>
+                            <button type="submit" class="btn-submit" style="background-color: #f59e0b; color: #0f172a;">🚀 Gửi lại hồ sơ kiểm duyệt</button>
                         </form>
                     </div>
                 </c:when>
@@ -340,7 +364,8 @@
                                     <th>NỘI DUNG</th>
                                     <th>TIẾN ĐỘ GỌI VỐN</th>
                                 </tr>
-                            </thead>
+                            </table>
+                            <table class="table-loan">
                             <tbody>
                                 <c:choose>
                                     <c:when test="${not empty marketLoansList}">
@@ -375,17 +400,60 @@
     </div>
 
     <script>
+        // TỰ ĐỘNG BẮT LỖI HOẶC ÉP CHUYỂN GIAO DIỆN CLIENT-SIDE NẾU SERVLET KHÔNG ĐỔI CURRENT_ACTION
+        window.addEventListener('DOMContentLoaded', () => {
+            const urlParams = new URLSearchParams(window.location.search);
+            const actionParam = urlParams.get('action');
+            
+            if (actionParam === 're_ekyc') {
+                // Đổi trạng thái active sidebar menu sang mục Đăng ký nếu cần thiết hoặc hủy active Tổng quan
+                const activeMenu = document.querySelector('.sidebar-menu li.active');
+                if (activeMenu) activeMenu.classList.remove('active');
+                
+                // Cập nhật tiêu đề Topbar sang giao diện eKYC
+                const topbarTitle = document.getElementById('dynamic-topbar-title');
+                if (topbarTitle) topbarTitle.innerText = "Cập Nhật Thông Tin Định Danh eKYC";
+            }
+        });
+
+        // Hàm đọc file ảnh instant preview
+        function previewImage(input, previewId) {
+            const previewBox = document.getElementById(previewId);
+            const imgTag = previewBox.querySelector('img');
+            
+            if (input.files && input.files[0]) {
+                const reader = new FileReader();
+                reader.onload = function (e) {
+                    imgTag.src = e.target.result;
+                    previewBox.style.display = 'block';
+                }
+                reader.readAsDataURL(input.files[0]);
+            } else {
+                imgTag.src = "";
+                previewBox.style.display = 'none';
+            }
+        }
+
         function previewCurrency(value) {
             const previewDiv = document.getElementById('currencyPreview');
+            formatVND(value, previewDiv);
+        }
+
+        function previewCurrencyUpdate(value) {
+            const previewDiv = document.getElementById('updateCurrencyPreview');
+            formatVND(value, previewDiv);
+        }
+
+        function formatVND(value, element) {
             if (!value || isNaN(value)) {
-                previewDiv.innerText = '';
+                element.innerText = '';
                 return;
             }
             let formatter = new Intl.NumberFormat('vi-VN', {
                 style: 'currency',
                 currency: 'VND'
             });
-            previewDiv.innerText = '👉 Bằng chữ/Định dạng: ' + formatter.format(value);
+            element.innerText = '👉 Quy đổi định dạng: ' + formatter.format(value);
         }
 
         function validateForm() {

@@ -37,34 +37,27 @@ public class BorrowerDashboardServlet extends HttpServlet {
             
             Borrower borrower = bDao.getBorrowerById(userId);
             
-            if (borrower == null) {
-                borrower = bDao.getBorrowerById(1L);
-                if (borrower != null) {
-                    userId = borrower.getBorrowerId();
-                }
-            }
-
+            // Khởi tạo các giá trị hiển thị mặc định
             String fullName = "Người dùng";
             double monthlyIncome = 0.0;
             double maxLimit = 0.0;
+            String verificationStatus = "none";
 
             if (borrower != null) {
                 fullName = borrower.getFirstName() + " " + borrower.getLastName();
                 monthlyIncome = borrower.getMonthlyIncome();
                 maxLimit = monthlyIncome * 3.0; 
-            }
-
-            String verificationStatus = (String) session.getAttribute("verification_status");
-            if (verificationStatus == null || "none".equals(verificationStatus)) {
-                if (borrower != null && borrower.getVerificationStatus() != null) {
+                
+                // ĐỒNG BỘ THỜI GIAN THỰC: Ưu tiên lấy trạng thái mới nhất từ SQL thay vì dùng Session cũ
+                if (borrower.getVerificationStatus() != null) {
                     verificationStatus = borrower.getVerificationStatus();
-                } else {
-                    verificationStatus = "pending";
                 }
-                session.setAttribute("verification_status", verificationStatus);
             }
+            
+            // Cập nhật lại Session liên tục để các trang con (JSP) dùng chung không bị lệch dữ liệu
+            session.setAttribute("verification_status", verificationStatus);
 
-            // Gọi đồng bộ từ lDao
+            // Gọi đồng bộ danh sách khoản vay từ lDao
             List<LoanApplication> loanList = lDao.getLoansByBorrower(userId);
 
             boolean hasActiveLoan = false;
@@ -77,9 +70,17 @@ public class BorrowerDashboardServlet extends HttpServlet {
                 }
             }
 
+            // ================== [CẬP NHẬT CHỖ NÀY ĐỂ XỬ LÝ CHUYỂN SANG FORM EKYC] ==================
             if ("re_ekyc".equals(currentAction)) {
+                // Nạp đối tượng borrower vào request để trang ekyc.jsp có thể lấy thông tin điền sẵn nếu cần
                 request.setAttribute("borrowerObj", borrower);
+                request.setAttribute("trangThaiEkyc", verificationStatus);
+                
+                // Thay vì forward về dashboard, ta forward thẳng sang trang tải ảnh ekyc.jsp!
+                request.getRequestDispatcher("ekyc.jsp").forward(request, response);
+                return; // Chặn không cho chạy xuống đoạn forward dashboard ở cuối file
             } 
+            // =====================================================================================
             else if ("market_loans".equals(currentAction)) {
                 List<LoanApplication> marketLoans = lDao.getAllMarketLoans(); 
                 request.setAttribute("marketLoansList", marketLoans);
@@ -87,9 +88,10 @@ public class BorrowerDashboardServlet extends HttpServlet {
 
             double currentDebt = bDao.getCurrentDebt(userId);
 
+            // Đẩy toàn bộ dữ liệu sạch đã đồng bộ ra RequestDispatcher cho giao diện dashboard
             request.setAttribute("currentAction", currentAction);
             request.setAttribute("borrowerName", fullName);
-            request.setAttribute("trangThaiEkyc", verificationStatus);
+            request.setAttribute("trangThaiEkyc", verificationStatus); // Giá trị real-time từ DB
             request.setAttribute("thuNhapKhai", monthlyIncome);
             request.setAttribute("hanMucToiDa", maxLimit);
             request.setAttribute("tongDuNo", currentDebt);
@@ -164,7 +166,6 @@ public class BorrowerDashboardServlet extends HttpServlet {
                 
                 newLoan.setStatus("pending");
 
-                // Gọi hàm nạp chồng đối tượng vừa viết ở trên
                 boolean success = lDao.insertLoanApplication(newLoan);
                 
                 if (success) {
@@ -188,7 +189,7 @@ public class BorrowerDashboardServlet extends HttpServlet {
                 updateBorrower.setMonthlyIncome(monthlyIncome);
                 updateBorrower.setVerificationStatus("pending");
 
-                // Gọi hàm nhận đối tượng vừa nâng cấp
+                // Thực hiện gọi xuống database để cập nhật lại thông tin cá nhân và đổi status -> pending
                 boolean success = bDao.updateBorrowerEkyc(updateBorrower);
 
                 if (success) {

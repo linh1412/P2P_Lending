@@ -123,7 +123,6 @@ public class UserDAO {
     /**
      * TỐI ƯU LOGIC ĐĂNG NHẬP LẦN 2 (ĐỒNG BỘ THEO ENUM DATABASE):
      * Kiểm tra tài khoản đã gửi đủ 3 ảnh bắt buộc của eKYC chưa.
-     * ĐÃ SỬA: Đổi 'selfie' thành 'other' để khớp chuẩn xác 100% với ENUM bảng documents.
      */
     public boolean checkUserEKYC(long userId) {
         String sqlCountDocs = "SELECT COUNT(DISTINCT document_type) FROM documents WHERE user_id = ? "
@@ -135,7 +134,6 @@ public class UserDAO {
             psDocs.setLong(1, userId);
             try (ResultSet rs = psDocs.executeQuery()) {
                 if (rs.next()) {
-                    // Trả về true nếu đếm đủ 3 loại ảnh riêng biệt ('id_card_front', 'id_card_back', 'other')
                     return rs.getInt(1) >= 3; 
                 }
             }
@@ -184,6 +182,51 @@ public class UserDAO {
     // PHẦN 3: PHỤC VỤ CHO EKYCCONTROLLER / UPLOAD
     // ==========================================
 
+    /**
+     * GIẢI QUYẾT LỖI BIÊN DỊCH (GHI ĐÈ):
+     * Hàm tự động kiểm tra xem loại tài liệu (front, back, other) đã tồn tại của user chưa.
+     * - Nếu ĐÃ CÓ: Tiến hành UPDATE đường dẫn ảnh mới (Ghi đè để tránh rác DB khi re-eKYC).
+     * - Nếu CHƯA CÓ: Tiến hành INSERT mới hoàn toàn.
+     */
+    public boolean saveOrUpdateDocument(Long userId, String type, String fileUrl) {
+        String checkSql = "SELECT COUNT(*) FROM documents WHERE user_id = ? AND document_type = ?";
+        String insertSql = "INSERT INTO documents (user_id, document_type, file_url) VALUES (?, ?, ?)";
+        String updateSql = "UPDATE documents SET file_url = ?, updated_at = CURRENT_TIMESTAMP WHERE user_id = ? AND document_type = ?";
+        
+        try (Connection conn = DBConnection.getConnection()) {
+            // 1. Kiểm tra sự tồn tại của cấu hình loại ảnh thuộc User
+            try (PreparedStatement psCheck = conn.prepareStatement(checkSql)) {
+                psCheck.setLong(1, userId);
+                psCheck.setString(2, type);
+                try (ResultSet rs = psCheck.executeQuery()) {
+                    if (rs.next() && rs.getInt(1) > 0) {
+                        // 2. Thực hiện UPDATE nếu bản ghi đã tồn tại trước đó
+                        try (PreparedStatement psUpdate = conn.prepareStatement(updateSql)) {
+                            psUpdate.setString(1, fileUrl);
+                            psUpdate.setLong(2, userId);
+                            psUpdate.setString(3, type);
+                            return psUpdate.executeUpdate() > 0;
+                        }
+                    } else {
+                        // 3. Thực hiện INSERT nếu người dùng làm eKYC lần đầu tiên
+                        try (PreparedStatement psInsert = conn.prepareStatement(insertSql)) {
+                            psInsert.setLong(1, userId);
+                            psInsert.setString(2, type);
+                            psInsert.setString(3, fileUrl);
+                            return psInsert.executeUpdate() > 0;
+                        }
+                    }
+                }
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return false;
+    }
+
+    /**
+     * Giữ lại hàm cũ để tránh lỗi liên đới nếu các chức năng khác trong hệ thống của bạn đang gọi.
+     */
     public boolean insertDocument(Long userId, String type, String url) {
         String sql = "INSERT INTO documents (user_id, document_type, file_url) VALUES (?, ?, ?)";
         try (Connection conn = DBConnection.getConnection();

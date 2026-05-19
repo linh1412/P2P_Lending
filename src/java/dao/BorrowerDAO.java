@@ -11,9 +11,9 @@ import java.util.List;
 
 public class BorrowerDAO {
 
-    // 1. Lấy thông tin cơ bản của Borrower dựa trên ID người dùng đăng nhập
+    // 1. CẬP NHẬT: Lấy thông tin cơ bản VÀ số dư ví (wallet_balance) của Borrower dựa trên ID
     public Borrower getBorrowerById(long borrowerId) {
-        String sql = "SELECT borrower_id, first_name, last_name, verification_status, monthly_income " +
+        String sql = "SELECT borrower_id, first_name, last_name, verification_status, monthly_income, wallet_balance " +
                      "FROM borrowers WHERE borrower_id = ?";
         try (Connection conn = DBConnection.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql)) {
@@ -27,6 +27,11 @@ public class BorrowerDAO {
                     b.setLastName(rs.getString("last_name"));
                     b.setVerificationStatus(rs.getString("verification_status"));
                     b.setMonthlyIncome(rs.getDouble("monthly_income"));
+                    
+                    // LƯU Ý: Đảm bảo class model.Borrower của bạn đã có thuộc tính wallet_balance (Double hoặc BigDecimal)
+                    // Nếu dùng getter/setter khác tên, hãy đổi lại dòng dưới này cho khớp
+                    b.setWalletBalance(rs.getDouble("wallet_balance")); 
+                    
                     return b;
                 }
             }
@@ -36,12 +41,13 @@ public class BorrowerDAO {
         return null;
     }
 
-    // 2. Tính tổng dư nợ thực tế từ các khoản vay đang hoạt động (Status = 'active')
+    // 2. CẬP NHẬT ĐÃ SỬA LỖI LOGIC: Tính tổng dư nợ thực tế từ các khoản vay gọi vốn thành công/đang chạy
     public double getCurrentDebt(long borrowerId) {
         double totalDebt = 0.0;
+        // SỬA: Thay 'active' thành 'success' (hoặc 'disbursed') để khớp hoàn toàn với ENUM của bảng loans nhóm bạn
         String sql = "SELECT SUM(l.total_amount) FROM loans l " +
                      "INNER JOIN loan_applications la ON l.application_id = la.application_id " +
-                     "WHERE la.borrower_id = ? AND l.status = 'active'";
+                     "WHERE la.borrower_id = ? AND l.status = 'success'";
         try (Connection conn = DBConnection.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql)) {
             
@@ -57,7 +63,7 @@ public class BorrowerDAO {
         return totalDebt;
     }
 
-    // 3. OPTIMIZED: Lấy danh sách hồ sơ đơn vay của Borrower (Sắp xếp đơn mới nhất lên đầu)
+    // 3. GIỮ NGUYÊN: Lấy danh sách hồ sơ đơn vay của Borrower (Sắp xếp đơn mới nhất lên đầu)
     public List<LoanApplication> getLoansByBorrower(long borrowerId) {
         List<LoanApplication> list = new ArrayList<>();
         String sql = "SELECT application_id, amount_requested, term_months, created_at, cic_pdf_url, status " +
@@ -87,7 +93,7 @@ public class BorrowerDAO {
     }
 
     /**
-     * 🛠️ ĐÃ NÂNG CẤP TOÀN DIỆN: Cập nhật thông tin eKYC đầy đủ khi gửi lại hồ sơ bị lỗi
+     * 🛠️ GIỮ NGUYÊN: Cập nhật thông tin eKYC đầy đủ khi gửi lại hồ sơ bị lỗi
      */
     public boolean updateBorrowerEkyc(Borrower borrower) {
         String sql = "UPDATE borrowers SET first_name = ?, last_name = ?, monthly_income = ?, verification_status = ? WHERE borrower_id = ?";
@@ -108,7 +114,7 @@ public class BorrowerDAO {
     }
 
     /**
-     * Hàm cũ của bạn (giữ lại để tương thích ngược nếu có chỗ khác gọi)
+     * GIỮ NGUYÊN: Hàm cũ của bạn dùng để update nhanh trạng thái eKYC
      */
     public boolean updateEkycStatus(long borrowerId, String status) {
         String sql = "UPDATE borrowers SET verification_status = ? WHERE borrower_id = ?";
@@ -123,5 +129,12 @@ public class BorrowerDAO {
             e.printStackTrace();
         }
         return false;
+    }
+
+    /**
+     * BỔ SUNG: Hàm trùng tên (Alias) với luồng gọi trong Controller nhằm tránh lỗi Compile Error
+     */
+    public boolean updateVerificationStatus(long borrowerId, String status) {
+        return this.updateEkycStatus(borrowerId, status);
     }
 }

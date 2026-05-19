@@ -39,6 +39,7 @@ public class UserDAO {
         String sqlUser = "INSERT INTO users (email, password, role) VALUES (?, ?, ?)";
         String sqlBorrower = "INSERT INTO borrowers (borrower_id, first_name, last_name, id_card_number, monthly_income, wallet_balance, verification_status, risk_level) "
                            + "VALUES (?, ?, ?, ?, ?, 0.00, 'pending', 'Medium')";
+        
         String sqlInvestor = "INSERT INTO investors (investor_id, first_name, last_name, wallet_balance, frozen_balance, risk_appetite, verification_status) "
                            + "VALUES (?, ?, ?, 0.00, 0.00, ?, 'pending')";
 
@@ -107,7 +108,6 @@ public class UserDAO {
             try (ResultSet rs = ps.executeQuery()) {
                 if (rs.next()) {
                     User user = new User();
-                    // KHỚP 100% VỚI MODEl: setUser_id (có gạch dưới)
                     user.setUser_id(rs.getLong("user_id")); 
                     user.setEmail(rs.getString("email"));
                     user.setRole(rs.getString("role"));
@@ -120,23 +120,22 @@ public class UserDAO {
         return null;
     }
 
+    /**
+     * TỐI ƯU LOGIC ĐĂNG NHẬP LẦN 2 (ĐỒNG BỘ THEO ENUM DATABASE):
+     * Kiểm tra tài khoản đã gửi đủ 3 ảnh bắt buộc của eKYC chưa.
+     * ĐÃ SỬA: Đổi 'selfie' thành 'other' để khớp chuẩn xác 100% với ENUM bảng documents.
+     */
     public boolean checkUserEKYC(long userId) {
-        // Kiểm tra chung cho cả Borrower và Investor dựa vào 3 ảnh nộp lên
         String sqlCountDocs = "SELECT COUNT(DISTINCT document_type) FROM documents WHERE user_id = ? "
-                            + "AND document_type IN ('id_card_front', 'id_card_back', 'selfie')";
+                            + "AND document_type IN ('id_card_front', 'id_card_back', 'other')";
         
         try (Connection conn = DBConnection.getConnection();
              PreparedStatement psDocs = conn.prepareStatement(sqlCountDocs)) {
             
-            String status = getEkycStatus(userId);
-            if ("rejected".equals(status)) {
-                return false; 
-            }
-
             psDocs.setLong(1, userId);
             try (ResultSet rs = psDocs.executeQuery()) {
                 if (rs.next()) {
-                    // Phải tải đủ 3 loại ảnh (mặt trước, mặt sau, selfie) mới tính là qua bước eKYC ban đầu
+                    // Trả về true nếu đếm đủ 3 loại ảnh riêng biệt ('id_card_front', 'id_card_back', 'other')
                     return rs.getInt(1) >= 3; 
                 }
             }

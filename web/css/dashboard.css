@@ -1,0 +1,430 @@
+/* ==========================================================================
+   1. RESET & VARIABLE STYLES (Cấu hình màu sắc & font nền)
+   ========================================================================== */
+:root {
+    --primary-color: #2563eb;       /* Xanh dương chính */
+    --primary-hover: #1d4ed8;
+    --success-color: #16a34a;       /* Xanh lá (Đã duyệt/eKYC) */
+    --warning-color: #d97706;       /* Vàng hổ phách (Chờ duyệt) */
+    --danger-color: #dc2626;        /* Đỏ (Từ chối/Rủi ro) */
+    --text-main: #0f172a;           /* Chữ chính (Slate 900) */
+    --text-muted: #475569;          /* Chữ phụ (Slate 600) */
+    --bg-main: #f8fafc;             /* Nền trang (Slate 50) */
+    --sidebar-bg: #1e293b;          /* Nền sidebar (Slate 800) */
+    --border-color: #e2e8f0;        /* Đường viền (Slate 200) */
+}
+
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+    font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, Roboto, sans-serif;
+}
+
+body {
+    background-color: var(--bg-main);
+    color: var(--text-main);
+    display: flex;
+    min-height: 100vh;
+}
+
+/* ==========================================================================
+   2. SIDEBAR LAYOUT (Thanh điều hướng bên trái)
+   ========================================================================== */
+.sidebar {
+    width: 260px;
+    background-color: var(--sidebar-bg);
+    color: #ffffff;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    padding: 24px 16px;
+    position: fixed;
+    top: 0;
+    bottom: 0;
+    left: 0;
+    z-index: 100;
+}
+
+.sidebar-brand {
+    font-size: 20px;
+    font-weight: 800;
+    letter-spacing: 0.5px;
+    padding: 0 12px 24px 12px;
+    border-bottom: 1px solid #334155;
+    margin-bottom: 24px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.sidebar-menu {
+    list-style: none;
+}
+
+.sidebar-menu li {
+    margin-bottom: 8px;
+}
+
+.sidebar-menu li a {
+    display: block;
+    color: #cbd5e1;
+    text-decoration: none;
+    padding: 12px;
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 500;
+    transition: all 0.2s ease;
+}
+
+.sidebar-menu li:not(.disabled-menu):not(.active) a:hover {
+    background-color: #334155;
+    color: #ffffff;
+}
+
+.sidebar-menu li.active a {
+    background-color: var(--primary-color);
+    color: #ffffff;
+    font-weight: 600;
+}
+
+/* Trạng thái menu bị khóa khi dính lỗi eKYC hoặc đang có đơn vay */
+.sidebar-menu li.disabled-menu a {
+    color: #64748b;
+    cursor: not-allowed;
+    background-color: rgba(255, 255, 255, 0.02);
+}
+
+.btn-logout {
+    background-color: #334155;
+    color: #f1f5f9;
+    border: none;
+    padding: 12px;
+    width: 100%;
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+
+.btn-logout:hover {
+    background-color: #475569;
+    color: #ffffff;
+}
+
+/* ==========================================================================
+   3. MAIN CONTENT LAYOUT & TOPBAR (Vùng nội dung chính)
+   ========================================================================== */
+.main-content {
+    margin-left: 260px; /* Đẩy rộng bằng kích thước sidebar */
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+}
+
+.topbar {
+    background: #ffffff;
+    height: 70px;
+    border-bottom: 1px solid var(--border-color);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0 32px;
+    position: sticky;
+    top: 0;
+    z-index: 90;
+}
+
+.topbar-title {
+    font-size: 18px;
+    font-weight: 700;
+    color: var(--text-main);
+}
+
+.user-info {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    font-size: 14px;
+}
+
+.container {
+    padding: 32px;
+    max-width: 1200px;
+    width: 100%;
+    margin: 0 auto;
+}
+
+/* ==========================================================================
+   4. BADGES & ALERTS (Nhãn trạng thái & Thông báo)
+   ========================================================================== */
+.badge {
+    padding: 6px 12px;
+    border-radius: 9999px;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+}
+
+.badge-success { background-color: #dcfce7; color: var(--success-color); }
+.badge-warning { background-color: #fef3c7; color: var(--warning-color); }
+.badge-danger { background-color: #fee2e2; color: var(--danger-color); }
+
+.alert-banner {
+    padding: 16px;
+    border-radius: 8px;
+    margin-bottom: 24px;
+    font-size: 14px;
+    line-height: 1.5;
+}
+
+.alert-banner-success {
+    background-color: #ecfdf5;
+    border: 1px solid #a7f3d0;
+    color: #065f46;
+}
+
+.alert-banner-warning {
+    background-color: #fffbeb;
+    border: 1px solid #fde68a;
+    color: #92400e;
+}
+
+.alert-banner-danger {
+    background-color: #fef2f2;
+    border: 1px solid #fca5a5;
+    color: #991b1b;
+}
+
+.btn-action-ekyc {
+    display: inline-block;
+    margin-top: 8px;
+    background-color: var(--warning-color);
+    color: white;
+    text-decoration: none;
+    padding: 6px 12px;
+    border-radius: 6px;
+    font-weight: 600;
+    font-size: 13px;
+}
+
+/* Khóa tính năng (Màn hình khóa đăng ký vay) */
+.alert-lock {
+    text-align: center;
+    padding: 48px;
+    background: #ffffff;
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+}
+
+.alert-lock h3 {
+    margin: 16px 0 8px 0;
+    color: var(--text-main);
+}
+
+.alert-lock p {
+    color: var(--text-muted);
+    font-size: 14px;
+}
+
+/* ==========================================================================
+   5. STATS GRID (Khối thống kê tổng quan hạn mức)
+   ========================================================================== */
+.stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 20px;
+    margin-bottom: 24px;
+}
+
+.stat-card {
+    background: #ffffff;
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    padding: 24px;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.01);
+}
+
+.stat-info h5 {
+    font-size: 12px;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 8px;
+}
+
+.stat-info h2 {
+    font-size: 24px;
+    font-weight: 700;
+    color: var(--primary-color);
+}
+
+/* ==========================================================================
+   6. TABLES (Bảng hiển thị lịch sử đơn vay & chợ P2P)
+   ========================================================================== */
+.data-card {
+    background: #ffffff;
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    padding: 24px;
+    margin-bottom: 24px;
+}
+
+.data-card h4 {
+    font-size: 16px;
+    font-weight: 700;
+    margin-bottom: 16px;
+    color: var(--text-main);
+}
+
+.table-loan {
+    width: 100%;
+    border-collapse: collapse;
+    text-align: left;
+    font-size: 14px;
+}
+
+.table-loan th {
+    background-color: #f8fafc;
+    color: var(--text-muted);
+    font-weight: 600;
+    padding: 14px 16px;
+    border-bottom: 2px solid var(--border-color);
+}
+
+.table-loan td {
+    padding: 16px;
+    border-bottom: 1px solid var(--border-color);
+    color: var(--text-main);
+}
+
+.table-loan tr:hover td {
+    background-color: #f8fafc;
+}
+
+/* ==========================================================================
+   7. FORMS (Giao diện tạo khoản vay & upload eKYC)
+   ========================================================================== */
+.form-group {
+    margin-bottom: 20px;
+}
+
+.form-group label {
+    display: block;
+    font-size: 14px;
+    font-weight: 600;
+    margin-bottom: 6px;
+    color: var(--text-main);
+}
+
+.form-control {
+    width: 100%;
+    padding: 10px 14px;
+    border: 1px solid #cbd5e1;
+    border-radius: 8px;
+    font-size: 14px;
+    background-color: #ffffff;
+    color: var(--text-main);
+    outline: none;
+    transition: border-color 0.15s;
+}
+
+.form-control:focus {
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+}
+
+.form-hint {
+    display: block;
+    font-size: 12px;
+    color: var(--text-muted);
+    margin-top: 4px;
+}
+
+.currency-preview {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--success-color);
+    margin-top: 6px;
+}
+
+.preview-box {
+    display: none;
+    margin-top: 8px;
+    border: 1px dashed var(--border-color);
+    border-radius: 6px;
+    padding: 4px;
+    max-width: 200px;
+}
+
+.preview-box img {
+    width: 100%;
+    height: auto;
+    border-radius: 4px;
+}
+
+.btn-submit {
+    display: block;
+    width: 100%;
+    background-color: var(--primary-color);
+    color: #ffffff;
+    border: none;
+    padding: 12px;
+    font-size: 15px;
+    font-weight: 600;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: background 0.15s;
+    text-align: center;
+}
+
+.btn-submit:hover {
+    background-color: var(--primary-hover);
+}
+
+/* ==========================================================================
+   8. RESPONSIVE MEDIA QUERIES (Tối ưu thiết bị di động)
+   ========================================================================== */
+@media (max-width: 992px) {
+    .sidebar {
+        width: 70px;
+        padding: 24px 8px;
+    }
+    .sidebar-brand span, 
+    .sidebar-menu li a {
+        display: none; /* Ẩn chữ menu, chỉ giữ lại emoji/icon */
+    }
+    .sidebar-brand {
+        justify-content: center;
+        padding-bottom: 16px;
+    }
+    .sidebar-menu li a {
+        text-align: center;
+        font-size: 18px;
+        padding: 12px 0;
+    }
+    .main-content {
+        margin-left: 70px;
+    }
+    .topbar {
+        padding: 0 16px;
+    }
+    .container {
+        padding: 16px;
+    }
+}
+
+@media (max-width: 576px) {
+    .topbar-title {
+        font-size: 15px;
+    }
+    .user-info span:first-child {
+        display: none; /* Ẩn dòng chữ chào để nhường khoảng trống cho badge */
+    }
+    .table-loan {
+        display: block;
+        overflow-x: auto; /* Cuộn ngang bảng nếu màn hình quá bé */
+    }
+}

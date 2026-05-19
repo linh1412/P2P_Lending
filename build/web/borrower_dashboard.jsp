@@ -7,74 +7,65 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Sàn P2P Lending - Bảng Điều Khiển</title>
+    <!-- Nhúng file CSS tách riêng của bạn ở đây -->
+    <link rel="stylesheet" href="${pageContext.request.contextPath}/css/dashboard.css">
     <style>
-        :root { 
-            --sidebar-bg: #0f172a; 
-            --sidebar-active: #1e293b; 
-            --bg-main: #f8fafc; 
-            --primary-color: #3b82f6; 
-            --primary-hover: #2563eb;
+        /* Các class CSS bổ sung riêng cho hiển thị 5 gói vay đẹp hơn */
+        .package-card {
+            background: #ffffff;
+            border: 1px solid #e2e8f0;
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.02);
         }
-        body { font-family: 'Segoe UI', system-ui, sans-serif; margin: 0; padding: 0; display: flex; background-color: var(--bg-main); min-height: 100vh; }
-        
-        .sidebar { width: 260px; background-color: var(--sidebar-bg); color: #ffffff; display: flex; flex-direction: column; justify-content: space-between; position: fixed; top: 0; bottom: 0; left: 0; z-index: 100; }
-        .sidebar-brand { padding: 24px 20px; font-size: 20px; font-weight: bold; display: flex; align-items: center; border-bottom: 1px solid #1e293b; }
-        .sidebar-brand span { margin-left: 10px; }
-        .sidebar-menu { list-style: none; padding: 0; margin: 20px 0; flex-grow: 1; }
-        .sidebar-menu li a { display: flex; align-items: center; padding: 14px 20px; color: #94a3b8; text-decoration: none; font-size: 15px; transition: all 0.2s; }
-        .sidebar-menu li a:hover, .sidebar-menu li.active a { color: #ffffff; background-color: var(--sidebar-active); font-weight: 500; }
-        
-        .sidebar-menu li.disabled-menu a { color: #475569; cursor: not-allowed; background: none !important; }
-        .sidebar-menu li.disabled-menu a:hover { color: #475569; background: none; }
-
-        .btn-logout { background-color: #ef4444; color: white; padding: 14px 20px; text-decoration: none; display: flex; align-items: center; font-weight: bold; font-size: 15px; border: none; width: 100%; box-sizing: border-box; cursor: pointer; transition: background 0.2s;}
-        .btn-logout:hover { background-color: #dc2626; }
-        
-        .main-content { margin-left: 260px; flex-grow: 1; display: flex; flex-direction: column; min-height: 100vh; }
-        .topbar { background: #ffffff; padding: 15px 30px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #e2e8f0; }
-        .topbar-title { font-size: 18px; font-weight: bold; color: #1e293b; }
-        .user-info { display: flex; align-items: center; gap: 15px; }
-        
-        .badge { padding: 6px 14px; border-radius: 20px; font-size: 12px; font-weight: bold; text-transform: uppercase; }
-        .badge-success { background-color: #dcfce7; color: #15803d; }
-        .badge-warning { background-color: #fef9c3; color: #a16207; }
-        .badge-danger { background-color: #fef2f2; color: #991b1b; display: inline-block; text-decoration: none; }
-        
-        .container { padding: 30px; }
-        
-        .alert-banner { padding: 15px 20px; border-radius: 8px; margin-bottom: 25px; font-size: 14px; line-height: 1.5; border-left: 5px solid; }
-        .alert-banner-danger { background-color: #fef2f2; border-color: #ef4444; color: #991b1b; }
-        .alert-banner-warning { background-color: #fffbeb; border-color: #f59e0b; color: #92400e; }
-        .alert-banner-success { background-color: #dcfce7; border-color: #22c55e; color: #15803d; }
-
-        .btn-action-ekyc { display: inline-block; background-color: #f59e0b; color: #0f172a; padding: 8px 16px; font-weight: bold; text-decoration: none; border-radius: 6px; margin-top: 10px; font-size: 13px; transition: background 0.2s; }
-        .btn-action-ekyc:hover { background-color: #d97706; }
-
-        .stats-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; margin-bottom: 30px; }
-        .stat-card { background: #ffffff; padding: 24px; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.05); border: 1px solid #e2e8f0; }
-        .stat-info h5 { margin: 0 0 8px 0; color: #64748b; font-size: 13px; }
-        .stat-info h2 { margin: 0; font-size: 24px; color: #0f172a; }
-        
-        .data-card { background: #ffffff; border-radius: 12px; border: 1px solid #e2e8f0; padding: 24px; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
-        .data-card h4 { margin-top: 0; margin-bottom: 20px; color: #1e293b; }
-        .table-loan { width: 100%; border-collapse: collapse; text-align: left; }
-        .table-loan th { padding: 12px; border-bottom: 2px solid #e2e8f0; color: #64748b; font-size: 13px; text-transform: uppercase; }
-        .table-loan td { padding: 14px 12px; border-bottom: 1px solid #edf2f7; color: #4a5568; font-size: 14px; }
-        
-        .form-group { margin-bottom: 20px; }
-        .form-group label { display: block; font-weight: 600; color: #334155; margin-bottom: 8px; font-size: 14px; }
-        .form-control { width: 100%; padding: 11px 14px; border: 1px solid #cbd5e1; border-radius: 6px; box-sizing: border-box; font-size: 14px; }
-        .form-control:focus { outline: none; border-color: var(--primary-color); box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1); }
-        .form-hint { color: #64748b; font-size: 13px; display: block; margin-top: 6px; }
-        .currency-preview { margin-top: 5px; font-size: 13px; color: #10b981; font-weight: 500; }
-        
-        .btn-submit { width: 100%; padding: 12px; background-color: var(--primary-color); color: white; border: none; border-radius: 6px; font-size: 15px; font-weight: bold; cursor: pointer; transition: background 0.2s; }
-        .btn-submit:hover { background-color: var(--primary-hover); }
-        .alert-lock { background-color: #fef2f2; border: 1px solid #fca5a5; color: #991b1b; padding: 40px 30px; border-radius: 8px; text-align: center; max-width: 500px; margin: 40px auto; }
-        .alert-lock h3 { margin: 15px 0 10px 0; }
-
-        .preview-box { margin-top: 8px; display: none; text-align: center; background: #f1f5f9; padding: 10px; border-radius: 6px; border: 1px dashed #cbd5e1; }
-        .preview-box img { max-width: 100%; max-height: 150px; border-radius: 4px; object-fit: contain; }
+        .package-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px dashed #e2e8f0;
+            padding-bottom: 12px;
+            margin-bottom: 15px;
+        }
+        .package-title {
+            font-size: 16px;
+            font-weight: bold;
+            color: #0f172a;
+        }
+        .package-limit {
+            font-size: 15px;
+            font-weight: 700;
+            color: #2563eb;
+        }
+        .package-desc {
+            font-size: 14px;
+            color: #475569;
+            margin-bottom: 15px;
+            line-height: 1.5;
+        }
+        .sub-config-title {
+            font-size: 13px;
+            font-weight: 600;
+            color: #64748b;
+            text-transform: uppercase;
+            margin-bottom: 8px;
+        }
+        .sub-config-list {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+        .sub-config-item {
+            background: #f1f5f9;
+            border: 1px solid #cbd5e1;
+            border-radius: 6px;
+            padding: 8px 12px;
+            font-size: 13px;
+            color: #1e293b;
+        }
+        .sub-config-item strong {
+            color: #16a34a;
+        }
     </style>
 </head>
 <body>
@@ -85,7 +76,7 @@
             <ul class="sidebar-menu">
                 <li class="${empty currentAction || currentAction == 'dashboard' ? 'active' : ''}" id="menu-dashboard">
                     <a href="${pageContext.request.contextPath}/BorrowerDashboardServlet?action=dashboard">📊 Tổng Quan Main</a>
-                </li >
+                </li>
                 
                 <c:choose>
                     <c:when test="${trangThaiEkyc == 'rejected'}">
@@ -105,6 +96,10 @@
                     </c:otherwise>
                 </c:choose>
 
+                <li class="${currentAction == 'loan_packages' ? 'active' : ''}">
+                    <a href="${pageContext.request.contextPath}/BorrowerDashboardServlet?action=loan_packages">🎁 Các Gói Vay Hệ Thống</a>
+                </li>
+
                 <li class="${currentAction == 'market_loans' ? 'active' : ''}">
                     <a href="${pageContext.request.contextPath}/BorrowerDashboardServlet?action=market_loans">🌐 Khoản Vay Trên Sàn</a>
                 </li>
@@ -120,6 +115,7 @@
             <div class="topbar-title" id="dynamic-topbar-title">
                 <c:choose>
                     <c:when test="${currentAction == 'create_loan'}">Đăng Ký Khoản Vay Mới</c:when>
+                    <c:when test="${currentAction == 'loan_packages'}">Các Gói Vay Hệ Thống Hỗ Trợ</c:when>
                     <c:when test="${currentAction == 'market_loans'}">Khoản Vay Đang Gọi Vốn Toàn Sàn</c:when>
                     <c:when test="${currentAction == 're_ekyc'}">Cập Nhật Thông Tin Định Danh eKYC</c:when>
                     <c:otherwise>Bảng Điều Khiển Tổng Quan</c:otherwise>
@@ -144,34 +140,30 @@
 
         <div class="container">
             
-            <%-- THÔNG BÁO TRẠNG THÁI CẬP NHẬT EKYC THÀNH CÔNG --%>
+            <%-- THÔNG BÁO HỆ THỐNG --%>
             <c:if test="${param.msg == 'ekyc_updated_success'}">
                 <div class="alert-banner alert-banner-success">
-                    <strong>🎉 Thành công:</strong> Hồ sơ eKYC của bạn đã được gửi lại thành công. Trạng thái tài khoản hiện tại chuyển về <b>Chờ duyệt (Pending)</b>. Vui lòng đợi hệ thống kiểm tra.
+                    <strong>🎉 Thành công:</strong> Hồ sơ eKYC của bạn đã được gửi lại thành công. Trạng thái tài khoản chuyển về <b>Chờ duyệt (Pending)</b>.
                 </div>
             </c:if>
 
-            <%-- THÔNG BÁO THÀNH CÔNG KHI SUBMIT ĐƠN VAY MỚI --%>
             <c:if test="${param.msg == 'loan_submit_success'}">
                 <div class="alert-banner alert-banner-success">
-                    <strong>🎉 Đăng ký thành công:</strong> Đơn đăng ký khoản vay của bạn đã được tiếp nhận và chuyển sang trạng thái <b>Chờ duyệt</b>. Ban quản trị sẽ sớm thẩm định tệp hồ sơ CIC PDF đính kèm.
+                    <strong>🎉 Đăng ký thành công:</strong> Đơn vay đã tiếp nhận sang trạng thái <b>Chờ duyệt</b> để thẩm định tệp hồ sơ CIC PDF.
                 </div>
             </c:if>
 
-            <%-- ĐOẠN ĐÃ SỬA: PHỐI HỢP THÊM PARAMETER ĐỂ TRÁNH LỖI ĐIỀU HƯỚNG CỦA SERVLET --%>
             <c:if test="${param.msg == 'error_ekyc_rejected' || (trangThaiEkyc == 'rejected' && currentAction != 're_ekyc')}">
                 <div class="alert-banner alert-banner-danger" id="rejected-warning-banner">
-                    <strong>⚠️ Quyền truy cập bị hạn chế:</strong> Hồ sơ định danh cá nhân (eKYC) của bạn hiện đang ở trạng thái <b>Từ chối (Rejected)</b>. Hệ thống đã khóa chức năng đăng ký khoản vay. 
+                    <strong>⚠️ Quyền truy cập bị hạn chế:</strong> Hồ sơ định danh cá nhân (eKYC) của bạn hiện đang ở trạng thái <b>Từ chối (Rejected)</b>.
                     <br>
-                    <a href="${pageContext.request.contextPath}/BorrowerDashboardServlet?action=re_ekyc" 
-                       onclick="this.href=this.href + '&currentAction=re_ekyc';" 
-                       class="btn-action-ekyc">🔄 Cập nhật lại thông tin eKYC ngay</a>
+                    <a href="${pageContext.request.contextPath}/BorrowerDashboardServlet?action=re_ekyc" class="btn-action-ekyc">🔄 Cập nhật lại thông tin eKYC ngay</a>
                 </div>
             </c:if>
             
             <c:if test="${param.msg == 'error_already_has_loan' || (hasActiveLoan && (empty currentAction || currentAction == 'dashboard'))}">
                 <div class="alert-banner alert-banner-warning">
-                    <strong>ℹ️ Thông báo hạn mức:</strong> Bạn đang có một yêu cầu vay đang trong trạng thái xử lý hồ sơ (Chờ duyệt) hoặc một khoản nợ chưa tất toán hoàn toàn trên hệ thống. Để đảm bảo an toàn tài chính, bạn chỉ được phép tạo đơn mới sau khi hoàn tất nghĩa vụ của đơn vay cũ.
+                    <strong>ℹ️ Thông báo hạn mức:</strong> Bạn đang có một yêu cầu vay đang xử lý hồ sơ hoặc một khoản nợ chưa tất toán hoàn toàn trên hệ thống.
                 </div>
             </c:if>
 
@@ -225,9 +217,7 @@
                                                     <td style="text-align: center;">
                                                         <c:choose>
                                                             <c:when test="${not empty myLoan.cicPdfUrl}">
-                                                                <a href="${myLoan.cicPdfUrl}" target="_blank" style="color:#2563eb; text-decoration:underline; font-weight: bold;">
-                                                                    📄 Xem PDF
-                                                                </a>
+                                                                <a href="${myLoan.cicPdfUrl}" target="_blank" style="color:#2563eb; text-decoration:underline; font-weight: bold;">📄 Xem PDF</a>
                                                             </c:when>
                                                             <c:otherwise>
                                                                 <span style="color: #94a3b8; font-style: italic; font-size: 13px;">Chưa có file</span>
@@ -255,44 +245,35 @@
                     </div>
                 </c:when>
 
-                <%-- TAB ĐẶC BIỆT: CẬP NHẬT LẠI EKYC BẰNG FILE ẢNH KHI BỊ REJECTED --%>
+                <%-- TAB ĐẶC BIỆT: CẬP NHẬT LẠI EKYC --%>
                 <c:when test="${currentAction == 're_ekyc'}">
-                    <div class="data-card" id="re-ekyc-form-view" style="max-width: 600px; margin: 0 auto;">
+                    <div class="data-card" style="max-width: 600px; margin: 0 auto;">
                         <h4>🔄 Làm mới hồ sơ định danh cá nhân (eKYC)</h4>
-                        <p style="font-size: 13px; color: #64748b; margin-bottom: 20px;">Vui lòng chụp và tải lại ảnh giấy tờ rõ ràng, chính chủ để gửi lại Ban quản trị xét duyệt (Ghi đè SQL trạng thái cũ).</p>
-                        
                         <form action="${pageContext.request.contextPath}/BorrowerDashboardServlet" method="POST" enctype="multipart/form-data">
                             <input type="hidden" name="action" value="update_ekyc">
                             
                             <div class="form-group">
                                 <label>Ảnh mặt trước CCCD / CMND <span style="color:red;">*</span></label>
                                 <input type="file" name="cccd_front" class="form-control" accept="image/*" required onchange="previewImage(this, 'front_preview')">
-                                <div id="front_preview" class="preview-box">
-                                    <img src="" alt="Mặt trước CCCD Preview">
-                                </div>
+                                <div id="front_preview" class="preview-box"><img src="" alt="Preview"></div>
                             </div>
 
                             <div class="form-group">
                                 <label>Ảnh mặt sau CCCD / CMND <span style="color:red;">*</span></label>
                                 <input type="file" name="cccd_back" class="form-control" accept="image/*" required onchange="previewImage(this, 'back_preview')">
-                                <div id="back_preview" class="preview-box">
-                                    <img src="" alt="Mặt sau CCCD Preview">
-                                </div>
+                                <div id="back_preview" class="preview-box"><img src="" alt="Preview"></div>
                             </div>
 
                             <div class="form-group">
                                 <label>Ảnh chân dung chụp cùng CCCD (Selfie) <span style="color:red;">*</span></label>
                                 <input type="file" name="selfie_avatar" class="form-control" accept="image/*" required onchange="previewImage(this, 'selfie_preview')">
-                                <div id="selfie_preview" class="preview-box">
-                                    <img src="" alt="Ảnh chân dung Preview">
-                                </div>
+                                <div id="selfie_preview" class="preview-box"><img src="" alt="Preview"></div>
                             </div>
 
                             <div class="form-group">
                                 <label>Thu nhập hằng tháng kê khai (VNĐ)</label>
                                 <input type="number" name="monthlyIncome" class="form-control" value="${not empty borrowerObj.monthlyIncome ? borrowerObj.monthlyIncome : ''}" required oninput="previewCurrencyUpdate(this.value)">
                                 <div id="updateCurrencyPreview" class="currency-preview"></div>
-                                <span class="form-hint">Hạn mức sẽ tự động tính toán lại sau khi tài khoản chuyển về trạng thái hợp lệ.</span>
                             </div>
                             
                             <button type="submit" class="btn-submit" style="background-color: #f59e0b; color: #0f172a;">🚀 Gửi lại hồ sơ kiểm duyệt</button>
@@ -306,7 +287,6 @@
                         <c:when test="${trangThaiEkyc == 'verified' && !hasActiveLoan}">
                             <div class="data-card" style="max-width: 600px; margin: 0 auto;">
                                 <h4>📝 Tạo Đơn Đăng Ký Vay Mới</h4>
-                                
                                 <form action="${pageContext.request.contextPath}/BorrowerDashboardServlet" method="POST" id="loanForm" onsubmit="return validateForm()">
                                     <input type="hidden" name="action" value="submit_loan">
                                     
@@ -314,9 +294,7 @@
                                         <label for="soTienVay">Số tiền yêu cầu gọi vốn (VNĐ)</label>
                                         <input type="number" id="soTienVay" name="amountRequested" min="1000000" data-max="${not empty hanMucToiDa ? hanMucToiDa : 0}" class="form-control" required oninput="previewCurrency(this.value)">
                                         <div id="currencyPreview" class="currency-preview"></div>
-                                        <span class="form-hint">
-                                            Hạn mức tối đa được phép vay: <strong style="color: var(--primary-color);"><fmt:formatNumber value="${hanMucToiDa}" type="number"/> đ</strong>
-                                        </span>
+                                        <span class="form-hint">Hạn mức tối đa được phép vay: <strong style="color: var(--primary-color);"><fmt:formatNumber value="${hanMucToiDa}" type="number"/> đ</strong></span>
                                     </div>
                                     <div class="form-group">
                                         <label for="kyHan">Kỳ hạn (Tháng)</label>
@@ -338,15 +316,93 @@
                             <div class="alert-lock">
                                 <span style="font-size: 40px;">🔒</span>
                                 <h3>Chức năng đăng ký vay đã bị khóa</h3>
-                                <p>Tài khoản của bạn hiện thuộc một trong các trường hợp:</p>
-                                <ul style="text-align: left; max-width: 380px; margin: 10px auto; color: #475569; font-size: 14px;">
-                                    <li>Chưa xác thực eKYC hoặc eKYC bị từ chối.</li>
-                                    <li>Đang có một khoản vay khác đang hoạt động dở dang.</li>
-                                </ul>
-                                <p style="font-size: 14px; color: #64748b; margin-top: 15px;">Vui lòng quay lại màn hình Tổng Quan để kiểm tra chi tiết lỗi.</p>
+                                <p>Tài khoản của bạn hiện chưa xác thực eKYC hoặc đang có một đơn vay khác đang hoạt động.</p>
                             </div>
                         </c:otherwise>
                     </c:choose>
+                </c:when>
+
+                <%-- TAB CHÍNH: HIỂN THỊ CẤU HÌNH 5 GÓI VAY HỆ THỐNG --%>
+                <c:when test="${currentAction == 'loan_packages'}">
+                    <div class="data-card">
+                        <h4>🎁 Danh Sách Gói Sản Phẩm Tín Dụng Hệ Thống</h4>
+                        <p style="font-size: 14px; color: #64748b; margin-bottom: 25px;">Hệ thống tự động phê duyệt hạn mức tối đa dựa trên điểm eKYC, lịch sử CIC và nguồn thu nhập thực tế của bạn.</p>
+                        
+                        <!-- GÓI 1 -->
+                        <div class="package-card">
+                            <div class="package-header">
+                                <span class="package-title">📦 Gói 1: Vay Tiêu Dùng Nhanh (Ứng lương / Mua sắm nhỏ)</span>
+                                <span class="package-limit">1.000.000 đ - 15.000.000 đ</span>
+                            </div>
+                            <div class="package-desc">Dành cho cá nhân cần tiền gấp, duyệt nhanh, hình thức tín chấp qua eKYC cơ bản.</div>
+                            <div class="sub-config-title">Các gói cấu hình kỳ hạn nhỏ:</div>
+                            <div class="sub-config-list">
+                                <div class="sub-config-item">📅 Kỳ hạn 1 tháng: Lãi suất <strong>1.0% / tháng</strong> (12.0% / năm)</div>
+                                <div class="sub-config-item">📅 Kỳ hạn 3 tháng: Lãi suất <strong>1.2% / tháng</strong> (14.4% / năm)</div>
+                                <div class="sub-config-item">📅 Kỳ hạn 6 tháng: Lãi suất <strong>1.5% / tháng</strong> (18.0% / năm)</div>
+                            </div>
+                        </div>
+
+                        <!-- GÓI 2 -->
+                        <div class="package-card">
+                            <div class="package-header">
+                                <span class="package-title">📦 Gói 2: Vay Trả Góp Linh Hoạt (Mua xe, đồ công nghệ, học phí)</span>
+                                <span class="package-limit">> 15.000.000 đ - 100.000.000 đ</span>
+                            </div>
+                            <div class="package-desc">Gói phổ thông, đòi hỏi chứng minh thu nhập tốt. Hình thức tín chấp hoặc thế chấp bằng chính tài sản mua (như ô tô nhỏ).</div>
+                            <div class="sub-config-title">Các gói cấu hình kỳ hạn nhỏ:</div>
+                            <div class="sub-config-list">
+                                <div class="sub-config-item">📅 Kỳ hạn 6 tháng: Lãi suất <strong>0.9% / tháng</strong> (10.8% / năm)</div>
+                                <div class="sub-config-item">📅 Kỳ hạn 12 tháng: Lãi suất <strong>1.1% / tháng</strong> (13.2% / năm)</div>
+                                <div class="sub-config-item">📅 Kỳ hạn 18 tháng: Lãi suất <strong>1.3% / tháng</strong> (15.6% / năm)</div>
+                            </div>
+                        </div>
+
+                        <!-- GÓI 3 -->
+                        <div class="package-card">
+                            <div class="package-header">
+                                <span class="package-title">📦 Gói 3: Vay Kinh Doanh Nhỏ / Hộ Gia Đình</span>
+                                <span class="package-limit">> 100.000.000 đ - 500.000.000 đ</span>
+                            </div>
+                            <div class="package-desc">Dành cho các chủ shop online, hộ kinh doanh cá thể cần nguồn vốn nhập hàng, quay vòng dòng tiền nhanh.</div>
+                            <div class="sub-config-title">Các gói cấu hình kỳ hạn nhỏ:</div>
+                            <div class="sub-config-list">
+                                <div class="sub-config-item">📅 Kỳ hạn 12 tháng: Lãi suất <strong>0.8% / tháng</strong> (9.6% / năm)</div>
+                                <div class="sub-config-item">📅 Kỳ hạn 24 tháng: Lãi suất <strong>1.0% / tháng</strong> (12.0% / năm)</div>
+                                <div class="sub-config-item">📅 Kỳ hạn 36 tháng: Lãi suất <strong>1.2% / tháng</strong> (14.4% / năm)</div>
+                            </div>
+                        </div>
+
+                        <!-- GÓI 4 -->
+                        <div class="package-card">
+                            <div class="package-header">
+                                <span class="package-title">📦 Gói 4: Vay Khởi Nghiệp / Doanh Nghiệp Phát Triển (SME)</span>
+                                <span class="package-limit">> 500.000.000 đ - 1.500.000.000 đ</span>
+                            </div>
+                            <div class="package-desc">Bổ sung vốn lưu động, mua sắm máy móc, thiết bị sản xuất. Yêu cầu có tài sản đảm bảo (máy móc, nhà xưởng, xe tải) hoặc báo cáo tài chính kiểm toán tốt.</div>
+                            <div class="sub-config-title">Các gói cấu hình kỳ hạn nhỏ:</div>
+                            <div class="sub-config-list">
+                                <div class="sub-config-item">📅 Kỳ hạn 12 tháng: Lãi suất <strong>0.75% / tháng</strong> (9.0% / năm)</div>
+                                <div class="sub-config-item">📅 Kỳ hạn 24 tháng: Lãi suất <strong>0.85% / tháng</strong> (10.2% / năm)</div>
+                                <div class="sub-config-item">📅 Kỳ hạn 36 tháng: Lãi suất <strong>0.95% / tháng</strong> (11.4% / năm)</div>
+                            </div>
+                        </div>
+
+                        <!-- GÓI 5 -->
+                        <div class="package-card" style="border-color: #f59e0b; background: #fffbeb;">
+                            <div class="package-header">
+                                <span class="package-title" style="color: #b45309;">💎 Gói 5: Vay Đầu Tư Bất Động Sản & Dự Án Lớn</span>
+                                <span class="package-limit" style="color: #b45309;">Hạn Mức Cao Cấp</span>
+                            </div>
+                            <div class="package-desc" style="color: #78350f;">Gói vay lớn nhất trên sàn P2P Lending. <b>Bắt buộc phải thế chấp bằng Bất động sản hợp pháp (Sổ đỏ / Sổ hồng)</b>. Quy trình thẩm định hồ sơ thực địa nghiêm ngặt qua nhiều bước bảo mật.</div>
+                            <div class="sub-config-title" style="color: #b45309;">Yêu cầu cấu hình:</div>
+                            <div class="sub-config-list">
+                                <span class="badge badge-warning" style="background:#fef3c7; color:#b45309;">Thẩm định tài sản riêng biệt</span>
+                                <span class="badge badge-warning" style="background:#fef3c7; color:#b45309;">Lãi suất thỏa thuận ưu đãi</span>
+                            </div>
+                        </div>
+
+                    </div>
                 </c:when>
 
                 <%-- TAB 3: KHOẢN VAY TRÊN SÀN --%>
@@ -361,11 +417,9 @@
                                     <th>MỨC ĐỘ RỦI RO</th>
                                     <th>SỐ TIỀN VAY</th>
                                     <th>KÝ HẠN</th>
-                                    <th>NỘI DUNG</th>
                                     <th>TIẾN ĐỘ GỌI VỐN</th>
                                 </tr>
-                            </table>
-                            <table class="table-loan">
+                            </thead>
                             <tbody>
                                 <c:choose>
                                     <c:when test="${not empty marketLoansList}">
@@ -376,7 +430,6 @@
                                                 <td><span style="padding:4px 8px; border-radius:4px; font-size:12px; background:#fef9c3; color:#a16207; font-weight:bold;">Mức thấp</span></td>
                                                 <td><strong><fmt:formatNumber value="${loan.amountRequested}" type="number" groupingUsed="true"/> đ</strong></td>
                                                 <td><c:out value="${loan.termMonths}"/> Tháng</td>
-                                                <td><i style="color:#94a3b8;">Gọi vốn tiêu dùng dùng CIC cá nhân</i></td>
                                                 <td>
                                                     <c:set var="percent" value="${not empty loan.amountRequested && loan.amountRequested gt 0 ? (loan.amountRaised * 100 / loan.amountRequested) : 0}"/>
                                                     <div style="width: 80px; background: #e2e8f0; border-radius: 10px; height: 6px; display: inline-block; margin-right: 5px;">
@@ -388,7 +441,7 @@
                                         </c:forEach>
                                     </c:when>
                                     <c:otherwise>
-                                        <tr><td colspan="7" style="text-align: center; color: #a0aec0; padding: 20px;">Không có đơn gọi vốn nào khác trên sàn.</td></tr>
+                                        <tr><td colspan="6" style="text-align: center; color: #a0aec0; padding: 20px;">Không có đơn gọi vốn nào khác trên sàn.</td></tr>
                                     </c:otherwise>
                                 </c:choose>
                             </tbody>
@@ -400,27 +453,18 @@
     </div>
 
     <script>
-        // TỰ ĐỘNG BẮT LỖI HOẶC ÉP CHUYỂN GIAO DIỆN CLIENT-SIDE NẾU SERVLET KHÔNG ĐỔI CURRENT_ACTION
         window.addEventListener('DOMContentLoaded', () => {
             const urlParams = new URLSearchParams(window.location.search);
             const actionParam = urlParams.get('action');
-            
             if (actionParam === 're_ekyc') {
-                // Đổi trạng thái active sidebar menu sang mục Đăng ký nếu cần thiết hoặc hủy active Tổng quan
                 const activeMenu = document.querySelector('.sidebar-menu li.active');
                 if (activeMenu) activeMenu.classList.remove('active');
-                
-                // Cập nhật tiêu đề Topbar sang giao diện eKYC
-                const topbarTitle = document.getElementById('dynamic-topbar-title');
-                if (topbarTitle) topbarTitle.innerText = "Cập Nhật Thông Tin Định Danh eKYC";
             }
         });
 
-        // Hàm đọc file ảnh instant preview
         function previewImage(input, previewId) {
             const previewBox = document.getElementById(previewId);
             const imgTag = previewBox.querySelector('img');
-            
             if (input.files && input.files[0]) {
                 const reader = new FileReader();
                 reader.onload = function (e) {
@@ -428,31 +472,20 @@
                     previewBox.style.display = 'block';
                 }
                 reader.readAsDataURL(input.files[0]);
-            } else {
-                imgTag.src = "";
-                previewBox.style.display = 'none';
             }
         }
 
         function previewCurrency(value) {
-            const previewDiv = document.getElementById('currencyPreview');
-            formatVND(value, previewDiv);
+            formatVND(value, document.getElementById('currencyPreview'));
         }
 
         function previewCurrencyUpdate(value) {
-            const previewDiv = document.getElementById('updateCurrencyPreview');
-            formatVND(value, previewDiv);
+            formatVND(value, document.getElementById('updateCurrencyPreview'));
         }
 
         function formatVND(value, element) {
-            if (!value || isNaN(value)) {
-                element.innerText = '';
-                return;
-            }
-            let formatter = new Intl.NumberFormat('vi-VN', {
-                style: 'currency',
-                currency: 'VND'
-            });
+            if (!value || isNaN(value)) { element.innerText = ''; return; }
+            let formatter = new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' });
             element.innerText = '👉 Quy đổi định dạng: ' + formatter.format(value);
         }
 
@@ -460,17 +493,8 @@
             const inputSotien = document.getElementById('soTienVay');
             const soTienVay = parseFloat(inputSotien.value);
             const hanMucToiDa = parseFloat(inputSotien.getAttribute('data-max')) || 0;
-            const ngayCapCic = new Date(document.getElementById('ngayCapCic').value);
-            const today = new Date();
-
             if (soTienVay > hanMucToiDa) {
-                alert("Số tiền đăng ký vay vượt quá hạn mức cho phép của bạn (" + hanMucToiDa.toLocaleString('vi-VN') + " đ)!");
-                return false;
-            }
-            
-            today.setHours(0,0,0,0);
-            if (ngayCapCic > today) {
-                alert("Ngày cấp hồ sơ CIC không được là ngày trong tương lai!");
+                alert("Số tiền đăng ký vay vượt quá hạn mức cho phép (" + hanMucToiDa.toLocaleString('vi-VN') + " đ)!");
                 return false;
             }
             return true;
